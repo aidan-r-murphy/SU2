@@ -120,6 +120,7 @@ class CScalarSolver : public CSolver {
 
     if (flowNodes) {
       numerics->SetPrimitive(flowNodes->GetPrimitive(iPoint), flowNodes->GetPrimitive(jPoint));
+      numerics->SetPrimVarGradient(flowNodes->GetGradient_Primitive(iPoint), flowNodes->GetGradient_Primitive(jPoint));
     }
 
     /*--- Turbulent variables w/o reconstruction, and its gradients ---*/

@@ -174,6 +174,95 @@ public:
 };
 
 /*!
+ * \class CAvgGrad_TurbSA_Catris
+ * \brief Class for computing viscous term using average of gradients (Spalart-Allmaras Turbulence model).
+ * \ingroup ViscDiscr
+ * \author A. Murphy
+ */
+template <class FlowIndices>
+class CAvgGrad_TurbSA_Catris final : public CAvgGrad_Scalar<FlowIndices> {
+private:
+  using Base = CAvgGrad_Scalar<FlowIndices>;
+  using Base::Laminar_Viscosity_i;
+  using Base::Laminar_Viscosity_j;
+  using Base::Density_i;
+  using Base::Density_j;
+  using Base::ScalarVar_i;
+  using Base::ScalarVar_j;
+  using Base::Proj_Mean_GradScalarVar;
+  using Base::proj_vector_ij;
+  using Base::Flux;
+  using Base::Jacobian_i;
+  using Base::Jacobian_j;
+  // CATRIS TERMS
+  using Base::PrimVar_Grad_i;
+  using Base::PrimVar_Grad_j;
+  using Base::nDim;
+  using Base::idx;
+  using Base::Normal;
+
+  const su2double sigma = 2.0/3.0;
+
+  /*!
+   * \brief Adds any extra variables to AD
+   */
+  void ExtraADPreaccIn() override {}
+
+  /*!
+   * \brief SA-Catris specific steps in the ComputeResidual method
+   * \param[in] config - Definition of the particular problem.
+   */
+  void FinishResidualCalc(const CConfig* config) override {
+    const bool implicit = config->GetKind_TimeIntScheme() == EULER_IMPLICIT;
+
+    /*--- Compute mean effective viscosity ---*/
+
+    const su2double nu_i = Laminar_Viscosity_i/Density_i;
+    const su2double nu_j = Laminar_Viscosity_j/Density_j;
+
+    const su2double nu_ij = 0.5*(nu_i+nu_j);
+    const su2double nu_tilde_ij = 0.5*(ScalarVar_i[0] + ScalarVar_j[0]);
+    const su2double density_ij = 0.5*(Density_i + Density_j);
+
+    const su2double nu_e = nu_ij + nu_tilde_ij;
+
+    const auto& densityGrad_i = (PrimVar_Grad_i + idx.Density())[0];
+    const auto& densityGrad_j = (PrimVar_Grad_j + idx.Density())[0];
+
+    su2double Drho_Dxj = 0.0;
+    su2double Proj_Mean_Grad_Rho = 0.0;
+    
+    for (unsigned short iDim = 0; iDim < nDim; ++iDim) {
+        Drho_Dxj += 0.5*(densityGrad_i[iDim] + densityGrad_j[iDim]);
+        Proj_Mean_Grad_Rho += (0.5*(densityGrad_i[iDim] + densityGrad_j[iDim])) * Normal[iDim];
+    }
+    
+    Flux[0] = nu_e*Proj_Mean_GradScalarVar[0]/sigma + (pow(nu_tilde_ij,2.0)/(2*density_ij)*Proj_Mean_Grad_Rho/sigma);
+
+    /*--- For Jacobians -> Use of TSL approx. to compute derivatives of the gradients ---*/
+
+    // TODO: change Jacobian
+
+    if (implicit) {
+      Jacobian_i[0][0] = (0.5*Proj_Mean_GradScalarVar[0]-nu_e*proj_vector_ij)/sigma;
+      Jacobian_j[0][0] = (0.5*Proj_Mean_GradScalarVar[0]+nu_e*proj_vector_ij)/sigma;
+    }
+  }
+
+public:
+  /*!
+   * \brief Constructor of the class.
+   * \param[in] val_nDim - Number of dimensions of the problem.
+   * \param[in] val_nVar - Number of variables of the problem.
+   * \param[in] correct_grad - Whether to correct gradient for skewness.
+   * \param[in] config - Definition of the particular problem.
+   */
+  CAvgGrad_TurbSA_Catris(unsigned short val_nDim, unsigned short val_nVar,
+                  bool correct_grad, const CConfig* config)
+    : CAvgGrad_Scalar<FlowIndices>(val_nDim, val_nVar, correct_grad, config) {}
+};
+
+/*!
  * \class CAvgGrad_TurbSST
  * \brief Class for computing viscous term using average of gradient with correction (Menter SST turbulence model).
  * \ingroup ViscDiscr

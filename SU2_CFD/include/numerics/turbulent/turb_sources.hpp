@@ -52,10 +52,10 @@ struct CSAVariables {
   const su2double c2 = 0.7, c3 = 0.9;
 
   /*--- List of auxiliary functions ---*/
-  su2double ft2, d_ft2, r, d_r, g, d_g, glim, fw, d_fw, Ji, d_Ji, S, Shat, d_Shat, fv1, d_fv1, fv2, d_fv2;
+  su2double ft2, d_ft2, r, d_r, g, d_g, glim, fw, d_fw, Ji, d_Ji, S, Shat, d_Shat, fv1, d_fv1, fv2, d_fv2, density;
 
   /*--- List of helpers ---*/
-  su2double Omega, dist_i_2, inv_k2_d2, inv_Shat, g_6, norm2_Grad;
+  su2double Omega, dist_i_2, inv_k2_d2, inv_Shat, g_6, norm2_Grad, rho2_Grad, rhonut_Grad;
 
   su2double intermittency, interDestrFactor;
 };
@@ -111,6 +111,7 @@ class CSourceBase_TurbSA : public CNumerics {
     AD::SetPreaccIn(Vorticity_i, 3);
     AD::SetPreaccIn(PrimVar_Grad_i + idx.Velocity(), nDim, nDim);
     AD::SetPreaccIn(ScalarVar_Grad_i[0], nDim);
+    AD::SetPreaccIn(PrimVar_Grad_i + idx.Density(), nDim, nDim);
 
     /*--- Common auxiliary variables and constants of the model. ---*/
     CSAVariables var;
@@ -174,6 +175,9 @@ class CSourceBase_TurbSA : public CNumerics {
       var.d_fw = var.d_g * var.glim * (1 - var.g_6 / (var.g_6 + var.cw3_6));
 
       var.norm2_Grad = GeometryToolbox::SquaredNorm(nDim, ScalarVar_Grad_i[0]);
+      var.rho2_Grad = GeometryToolbox::SquaredNorm(nDim, (PrimVar_Grad_i + idx.Density())[0]);
+      var.rhonut_Grad = GeometryToolbox::DotProduct(nDim, (PrimVar_Grad_i + idx.Density())[0], ScalarVar_Grad_i[0]);
+      var.density = density;
 
       if (options.bc) {
         /*--- BC transition model (2020 revision). This should only be used with SA-noft2.
@@ -463,6 +467,31 @@ struct Neg {
     Bsl::ComputeCrossProduction(nue, var, cross_production, jacobian);
   }
 };
+
+/*! \brief Catris. */
+struct Catris {
+  static void get(const su2double& nue, const CSAVariables& var, su2double& production, su2double& destruction,
+                  su2double& cross_production, su2double& jacobian) {
+    ComputeProduction(nue, var, production, jacobian);
+    ComputeDestruction(nue, var, destruction, jacobian);
+    ComputeCrossProduction(nue, var, cross_production, jacobian);
+  }
+
+  static void ComputeProduction(const su2double& nue, const CSAVariables& var, su2double& production,
+                                su2double& jacobian) {
+    Bsl::ComputeProduction(nue, var, production, jacobian);
+  }
+
+  static void ComputeDestruction(const su2double& nue, const CSAVariables& var, su2double& destruction,
+                                 su2double& jacobian) {
+    Bsl::ComputeDestruction(nue, var, destruction, jacobian);
+  }
+
+  static void ComputeCrossProduction(const su2double& nue, const CSAVariables& var, su2double& cross_production,
+                                     su2double& jacobian) {
+    cross_production = var.cb2_sigma * (var.norm2_Grad + (nue * var.rhonut_Grad) + (0.25 * ((pow(nue,2.0)/var.density) * var.rho2_Grad)));
+  }
+};
 };
 
 /* =============================================================================
@@ -549,6 +578,12 @@ struct EdwardsSA {
   using type = CSourceBase_TurbSA<FlowIndices, Omega::Edw, Ft2, ModVort::Edw, r::Edw, SourceTerms::Bsl>;
 };
 
+template <class FlowIndices>
+struct CatrisSA {
+  template <class Ft2>
+  using type = CSourceBase_TurbSA<FlowIndices, Omega::Bsl, Ft2, ModVort::Bsl, r::Bsl, SourceTerms::Catris>;
+};
+
 template <class BaseType, class... Ts>
 CNumerics* AddCompressibilityCorrection(bool use_comp, Ts... args) {
   if (use_comp) {
@@ -584,6 +619,8 @@ CNumerics* SAFactory(unsigned short nDim, const CConfig* config) {
       return detail::SAFactoryImpl<detail::NegativeSA<FlowIndices>>(options.ft2, options.comp, nDim, config);
     case SA_OPTIONS::EDW:
       return detail::SAFactoryImpl<detail::EdwardsSA<FlowIndices>>(options.ft2, options.comp, nDim, config);
+    case SA_OPTIONS::CATRIS:
+      return detail::SAFactoryImpl<detail::CatrisSA<FlowIndices>>(options.ft2, options.comp, nDim, config);
     default:
       break;
   }

@@ -1269,6 +1269,8 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
     if (spalart_allmaras) {
       if (config->GetSAParsedOptions().version == SA_OPTIONS::NEG) {
         numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA_Neg<Indices>(nDim, nVar_Turb, true, config);
+      } else if (config->GetSAParsedOptions().version == SA_OPTIONS::CATRIS) {
+        numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA_Catris<Indices>(nDim, nVar_Turb, true, config);
       } else {
         numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA<Indices>(nDim, nVar_Turb, true, config);
       }
@@ -1299,6 +1301,8 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
 
       if (config->GetSAParsedOptions().version == SA_OPTIONS::NEG) {
         numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSA_Neg<Indices>(nDim, nVar_Turb, false, config);
+      } else if (config->GetSAParsedOptions().version == SA_OPTIONS::CATRIS) {
+        numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSA_Catris<Indices>(nDim, nVar_Turb, false, config);
       } else {
         numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSA<Indices>(nDim, nVar_Turb, false, config);
       }

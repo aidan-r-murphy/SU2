@@ -1087,6 +1087,7 @@ enum class SA_OPTIONS {
   ROT,      /*!< \brief Rotation correction. */
   BC,       /*!< \brief Bas-Cakmakcioclu transition. */
   EXP,      /*!< \brief Allow experimental combinations of options (according to TMR). */
+  CATRIS,   /*!< \brief Catris-Aupoix Corrections. */
 };
 static const MapType<std::string, SA_OPTIONS> SA_Options_Map = {
   MakePair("NONE", SA_OPTIONS::NONE)
@@ -1098,6 +1099,7 @@ static const MapType<std::string, SA_OPTIONS> SA_Options_Map = {
   MakePair("ROTATION", SA_OPTIONS::ROT)
   MakePair("BCM", SA_OPTIONS::BC)
   MakePair("EXPERIMENTAL", SA_OPTIONS::EXP)
+  MakePair("CATRIS", SA_OPTIONS::CATRIS)
 };
 
 /*!
@@ -1129,7 +1131,8 @@ inline SA_ParsedOptions ParseSAOptions(const SA_OPTIONS *SA_Options, unsigned sh
 
   const bool found_neg = IsPresent(SA_OPTIONS::NEG);
   const bool found_edw = IsPresent(SA_OPTIONS::EDW);
-  const bool found_bsl = !found_neg && !found_edw;
+  const bool found_catris = IsPresent(SA_OPTIONS::CATRIS);
+  const bool found_bsl = !found_neg && !found_edw && !found_catris;
 
   if (found_neg && found_edw) {
     SU2_MPI::Error("Two versions (Negative and Edwards) selected for SA_OPTIONS. Please choose only one.", CURRENT_FUNCTION);
@@ -1139,8 +1142,10 @@ inline SA_ParsedOptions ParseSAOptions(const SA_OPTIONS *SA_Options, unsigned sh
     SAParsedOptions.version = SA_OPTIONS::NONE;
   } else if (found_neg) {
     SAParsedOptions.version = SA_OPTIONS::NEG;
-  } else {
+  } else if (found_edw) {
     SAParsedOptions.version = SA_OPTIONS::EDW;
+  } else {
+    SAParsedOptions.version = SA_OPTIONS::CATRIS;
   }
   SAParsedOptions.ft2 = IsPresent(SA_OPTIONS::FT2);
   SAParsedOptions.qcr2000 = IsPresent(SA_OPTIONS::QCR2000);
