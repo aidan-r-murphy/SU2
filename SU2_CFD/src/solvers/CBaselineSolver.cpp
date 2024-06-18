@@ -427,6 +427,8 @@ void CBaselineSolver::LoadRestart(CGeometry **geometry, CSolver ***solver, CConf
           index++;
         } else if (turb_model == TURB_MODEL::SST) {
           index+=2;
+        } else if (turb_model == TURB_MODEL::WA) {
+          index++;
         }
 
         /*--- Read in the next 2 or 3 variables which are the grid velocities ---*/

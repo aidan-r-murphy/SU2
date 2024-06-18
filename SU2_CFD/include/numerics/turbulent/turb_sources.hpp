@@ -911,3 +911,118 @@ class CSourcePieceWise_TurbSST final : public CNumerics {
     return ResidualType<>(Residual, Jacobian_i, nullptr);
   }
 };
+
+/*!
+ * \class CSourcePieceWise_TurbWA
+ * \ingroup SourceDiscr
+ * \brief Class for integrating the source terms of the Wray-Agarwal turbulence model equation.
+ */
+template <class FlowIndices>
+class CSourcePieceWise_TurbWA : public CNumerics {
+ private:
+  const FlowIndices idx; /*!< \brief Object to manage the access to the flow primitives. */
+
+  /*--- Closure constants ---*/
+  const su2double C_1_kom, C_1_keps, sigma_kom, sigma_keps, kappa, C_om, C_2kom, C_2keps, C_m;
+
+  /*--- Residual and Jacobian ---*/
+  su2double f1_i;
+  su2double Residual, *Jacobian_i;
+  su2double Jacobian_Buffer; /*!< \brief Static storage for the Jacobian (which needs to be pointer for return type). */
+
+ public:
+  /*!
+   * \brief Constructor of the class.
+   * \param[in] val_nDim - Number of dimensions of the problem.
+   * \param[in] constants - WA model constants.
+   * \param[in] config - Definition of the particular problem.
+   */
+  CSourcePieceWise_TurbWA(unsigned short val_nDim, unsigned short, const su2double* constants, const CConfig* config)
+      : CNumerics(val_nDim, 1, config),
+        idx(val_nDim, config->GetnSpecies()),
+        C_1_kom(constants[0]),
+        C_1_keps(constants[1]),
+        sigma_kom(constants[2]),
+        sigma_keps(constants[3]),
+        kappa(constants[4]),
+        C_om(constants[5]),
+        C_2kom(constants[6]),
+        C_2keps(constants[7]),
+        C_m(constants[8]) {
+    /*--- Setup the Jacobian pointer, we need to return su2double** but we know
+     * the Jacobian is 1x1 so we use this trick to avoid heap allocation. ---*/
+    Jacobian_i = &Jacobian_Buffer;
+  }
+
+  /*!
+   * \brief  Set the value of the WA model switching function.
+   * \param[in] val_f1_i - Value of the switching function at point i.
+   * \param[in] Not used.
+   */
+  inline void Setf1Switching(su2double val_f1_i, su2double) override {
+    f1_i = val_f1_i;
+  }
+
+  /*!
+   * \brief Residual for source term integration.
+   * \param[in] config - Definition of the particular problem.
+   * \return A lightweight const-view (read-only) of the residual/flux and Jacobians.
+   */
+  ResidualType<> ComputeResidual(const CConfig* config) override {
+    AD::StartPreacc();
+    AD::SetPreaccIn(StrainMag_i);
+    AD::SetPreaccIn(Vorticity_i, 3);
+    AD::SetPreaccIn(ScalarVar_i[0]);
+    AD::SetPreaccIn(ScalarVar_Grad_i[0], nDim);
+    AD::SetPreaccIn(AuxVar_Grad_i, nDim, nDim); // Strain Gradient
+    AD::SetPreaccIn(Volume);
+    AD::SetPreaccIn(dist_i);
+    AD::SetPreaccIn(f1_i);
+
+    Residual = 0.0;
+    Jacobian_i[0] = 0.0;
+
+    /* --- Helper variables for WA model --- */
+    StrainMag_i = max(StrainMag_i, 1.0e-16);
+
+    su2double GradR_dot_GradS = GeometryToolbox::DotProduct(nDim, ScalarVar_Grad_i[0], AuxVar_Grad_i[0]);
+    su2double StrainMag_Grad2_i = GeometryToolbox::Norm(nDim, AuxVar_Grad_i[0]);
+    su2double ScalarVar_Grad2_i = GeometryToolbox::Norm(nDim, ScalarVar_Grad_i[0]);
+    su2double S2 = pow(StrainMag_i, 2.0);
+
+    /* --- Computation of switching function constants for the source terms --- */
+    su2double C1_switching = f1_i*(C_1_kom - C_1_keps) + C_1_keps; 
+    su2double sigmaR_switching = f1_i*(sigma_kom - sigma_keps) + sigma_keps; 
+
+    if (dist_i > 1e-10) {
+      /*--- Vorticity ---*/
+      const su2double VorticityMag = GeometryToolbox::Norm(3, Vorticity_i);
+
+      /* --- Production term --- */
+      su2double Prod = C1_switching * ScalarVar_i[0] * StrainMag_i;
+
+      /* --- First Destruction term --- */
+      su2double Dest1 = f1_i * C_2kom * ScalarVar_i[0] / StrainMag_i * GradR_dot_GradS;
+
+      /* --- Second Destruction term --- */
+      su2double Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2), C_m*ScalarVar_Grad2_i);
+
+      /* --- Add the production term to the residual and Jacobian. --- */
+      Residual += Prod * Volume;
+      Jacobian_i[0] += (C1_switching * StrainMag_i)*Volume;
+
+      /* --- Add the first destruction term to the residual and Jacobian. --- */
+      Residual += Dest1 * Volume;
+      Jacobian_i[0] += (f1_i * C_2kom / StrainMag_i * GradR_dot_GradS)*Volume;
+
+      /* --- Add the second destruction term to the residual (treat this term as explicit). --- */
+      Residual -= Dest2 * Volume;
+      // Jacobian_i[0] -= ((1.0 - f1_i) * C_2keps * 2.0 * ScalarVar_i[0] * (StrainMag_Grad2_i / S2))*Volume;
+    }
+
+    AD::SetPreaccOut(Residual);
+    AD::EndPreacc();
+
+    return ResidualType<>(&Residual, &Jacobian_i, nullptr);
+  }
+};

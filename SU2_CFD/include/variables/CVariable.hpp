@@ -1625,6 +1625,23 @@ public:
   inline virtual const CVectorOfMatrix& GetGradient_Reconstruction() const { AssertOverride(); return Gradient; }
 
   /*!
+   * \brief Set the switching function for the WA model.
+   * \param[in] iPoint - Point index.
+   * \param[in] Vorticity - Vorticity vector.
+   * \param[in] StrainMag_i - Value of strain rate magnitude.
+   * \param[in] val_dist - Value of the distance to the wall.
+   * \param[in] val_density - Value of the density.
+   * \param[in] val_viscosity - Value of the vicosity.
+   */
+  inline virtual void SetSwitchingFunc(unsigned long iPoint, const su2double VorticityMag, const su2double StrainMag_i,
+                                       su2double val_dist, su2double val_density, su2double val_viscosity) {}
+
+  /*!
+   * \brief Get the WA model switching function
+   */
+  inline virtual su2double Getf1Switching(unsigned long iPoint) const { return 0.0; }
+
+  /*!
    * \brief Set the blending function for the blending of k-w and k-eps.
    * \param[in] val_viscosity - Value of the vicosity.
    * \param[in] val_density - Value of the density.

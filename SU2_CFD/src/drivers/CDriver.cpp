@@ -1217,7 +1217,7 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
 
   /*--- Assign turbulence model booleans ---*/
 
-  bool spalart_allmaras = false, menter_sst = false;
+  bool spalart_allmaras = false, menter_sst = false, wray_agarwal = false;
 
   switch (config->GetKind_Turb_Model()) {
     case TURB_MODEL::NONE:
@@ -1228,6 +1228,9 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
       break;
     case TURB_MODEL::SST:
       menter_sst = true;
+      break;
+    case TURB_MODEL::WA:
+      wray_agarwal = true;
       break;
   }
 
@@ -1243,6 +1246,10 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
     omega_Inf = turb_solver->GetOmega_Inf();
   }
 
+  if (wray_agarwal) {
+    constants = turb_solver->GetConstants();
+  }
+
   /*--- Definition of the convective scheme for each equation and mesh level ---*/
 
   switch (config->GetKind_ConvNumScheme_Turb()) {
@@ -1254,8 +1261,12 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
         if (spalart_allmaras) {
           numerics[iMGlevel][TURB_SOL][conv_term] = new CUpwSca_TurbSA<Indices>(nDim, nVar_Turb, config);
         }
-        else if (menter_sst)
+        else if (menter_sst) {
           numerics[iMGlevel][TURB_SOL][conv_term] = new CUpwSca_TurbSST<Indices>(nDim, nVar_Turb, config);
+        }
+        else if (wray_agarwal) {
+          numerics[iMGlevel][TURB_SOL][conv_term] = new CUpwSca_TurbWA<Indices>(nDim, nVar_Turb, config);
+        }
       }
       break;
     default:
@@ -1275,8 +1286,12 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
         numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA<Indices>(nDim, nVar_Turb, true, config);
       }
     }
-    else if (menter_sst)
+    else if (menter_sst) {
       numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSST<Indices>(nDim, nVar_Turb, constants, true, config);
+    }
+    else if (wray_agarwal) {
+      numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbWA<Indices>(nDim, nVar_Turb, constants, true, config);
+    }
   }
 
   /*--- Definition of the source term integration scheme for each equation and mesh level ---*/
@@ -1284,11 +1299,16 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
   for (auto iMGlevel = 0u; iMGlevel <= config->GetnMGLevels(); iMGlevel++) {
     auto& turb_source_first_term = numerics[iMGlevel][TURB_SOL][source_first_term];
 
-    if (spalart_allmaras)
+    if (spalart_allmaras) {
       turb_source_first_term = SAFactory<Indices>(nDim, config);
-    else if (menter_sst)
+    }
+    else if (menter_sst) {
       turb_source_first_term = new CSourcePieceWise_TurbSST<Indices>(nDim, nVar_Turb, constants, kine_Inf, omega_Inf,
                                                                      config);
+    }
+    else if (wray_agarwal) {
+      turb_source_first_term = new CSourcePieceWise_TurbWA<Indices>(nDim, nVar_Turb, constants, config);
+    }
 
     numerics[iMGlevel][TURB_SOL][source_second_term] = new CSourceNothing(nDim, nVar_Turb, config);
   }
@@ -1311,6 +1331,10 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
       numerics[iMGlevel][TURB_SOL][conv_bound_term] = new CUpwSca_TurbSST<Indices>(nDim, nVar_Turb, config);
       numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSST<Indices>(nDim, nVar_Turb, constants, false,
                                                                                     config);
+    }
+    else if (wray_agarwal) {
+      numerics[iMGlevel][TURB_SOL][conv_bound_term] = new CUpwSca_TurbWA<Indices>(nDim, nVar_Turb, config);
+      numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbWA<Indices>(nDim, nVar_Turb, constants, false, config);
     }
   }
 }
