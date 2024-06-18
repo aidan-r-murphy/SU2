@@ -9869,4 +9869,10 @@ public:
    */
   LM_ParsedOptions GetLMParsedOptions() const { return lmParsedOptions; }
 
+  /*!
+   * \brief Get parsed WA option data structure.
+   * \return WA option data structure.
+   */
+  WA_ParsedOptions GetWAParsedOptions() const { return waParsedOptions; }
+
 };
