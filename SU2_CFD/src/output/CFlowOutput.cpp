@@ -973,6 +973,11 @@ void CFlowOutput::AddHistoryOutputFields_ScalarRMS_RES(const CConfig* config) {
       AddHistoryOutput("RMS_DISSIPATION", "rms[w]",  ScreenOutputFormat::FIXED, "RMS_RES", "Root-mean square residual of dissipation (SST model).", HistoryFieldType::RESIDUAL);
       break;
 
+    case TURB_FAMILY::WA:
+      /// DESCRIPTION: Root-mean square residual of R (WA model).
+      AddHistoryOutput("RMS_R", "rms[R]",  ScreenOutputFormat::FIXED, "RMS_RES", "Root-mean square residual of R (WA model).", HistoryFieldType::RESIDUAL);
+      break;
+
     case TURB_FAMILY::NONE: break;
   }
   switch (config->GetKind_Trans_Model()) {
@@ -1025,6 +1030,11 @@ void CFlowOutput::AddHistoryOutputFields_ScalarMAX_RES(const CConfig* config) {
       AddHistoryOutput("MAX_TKE", "max[k]",  ScreenOutputFormat::FIXED, "MAX_RES", "Maximum residual of kinetic energy (SST model).", HistoryFieldType::RESIDUAL);
       /// DESCRIPTION: Maximum residual of the dissipation (SST model).
       AddHistoryOutput("MAX_DISSIPATION", "max[w]",  ScreenOutputFormat::FIXED, "MAX_RES", "Maximum residual of dissipation (SST model).", HistoryFieldType::RESIDUAL);
+      break;
+    
+    case TURB_FAMILY::WA:
+      /// DESCRIPTION: Maximum residual of R (WA model).
+      AddHistoryOutput("MAX_R", "max[R]", ScreenOutputFormat::FIXED, "MAX_RES", "Maximum residual of R (WA model).", HistoryFieldType::RESIDUAL);
       break;
 
     case TURB_FAMILY::NONE:
@@ -1083,6 +1093,11 @@ void CFlowOutput::AddHistoryOutputFields_ScalarBGS_RES(const CConfig* config) {
       AddHistoryOutput("BGS_TKE", "bgs[k]", ScreenOutputFormat::FIXED, "BGS_RES", "BGS residual of kinetic energy (SST model).", HistoryFieldType::RESIDUAL);
       /// DESCRIPTION: Maximum residual of the dissipation (SST model).
       AddHistoryOutput("BGS_DISSIPATION", "bgs[w]",  ScreenOutputFormat::FIXED, "BGS_RES", "BGS residual of dissipation (SST model).", HistoryFieldType::RESIDUAL);
+      break;
+    
+    case TURB_FAMILY::WA:
+      /// DESCRIPTION: Maximum residual of R (WA model).
+      AddHistoryOutput("BGS_R", "bgs[R]", ScreenOutputFormat::FIXED, "BGS_RES", "BGS residual of R (WA model).", HistoryFieldType::RESIDUAL);
       break;
 
     case TURB_FAMILY::NONE: break;
@@ -1173,6 +1188,14 @@ void CFlowOutput::LoadHistoryDataScalar(const CConfig* config, const CSolver* co
       }
       break;
 
+    case TURB_FAMILY::WA:
+      SetHistoryOutputValue("RMS_R", log10(solver[TURB_SOL]->GetRes_RMS(0)));
+      SetHistoryOutputValue("MAX_R", log10(solver[TURB_SOL]->GetRes_Max(0)));
+      if (multiZone) {
+        SetHistoryOutputValue("BGS_R", log10(solver[TURB_SOL]->GetRes_BGS(0)));
+      }
+      break;
+
     case TURB_FAMILY::NONE: break;
   }
 
@@ -1253,6 +1276,10 @@ void CFlowOutput::SetVolumeOutputFieldsScalarSolution(const CConfig* config){
       AddVolumeOutput("TKE", "Turb_Kin_Energy", "SOLUTION", "Turbulent kinetic energy");
       AddVolumeOutput("DISSIPATION", "Omega", "SOLUTION", "Rate of dissipation");
       break;
+    
+    case TURB_FAMILY::WA:
+      AddVolumeOutput("R", "R", "SOLUTION", "Wray-Agarwal variable");
+      break;
 
     case TURB_FAMILY::NONE:
       break;
@@ -1303,6 +1330,10 @@ void CFlowOutput::SetVolumeOutputFieldsScalarResidual(const CConfig* config) {
     case TURB_FAMILY::KW:
       AddVolumeOutput("RES_TKE", "Residual_TKE", "RESIDUAL", "Residual of turbulent kinetic energy");
       AddVolumeOutput("RES_DISSIPATION", "Residual_Omega", "RESIDUAL", "Residual of the rate of dissipation");
+      break;
+    
+    case TURB_FAMILY::WA:
+      AddVolumeOutput("RES_R", "Residual_R", "RESIDUAL", "Residual of the Wray-Agarwal variable");
       break;
 
     case TURB_FAMILY::NONE:
@@ -1356,6 +1387,10 @@ void CFlowOutput::SetVolumeOutputFieldsScalarLimiter(const CConfig* config) {
       case TURB_FAMILY::KW:
         AddVolumeOutput("LIMITER_TKE", "Limiter_TKE", "LIMITER", "Limiter value of turb. kinetic energy");
         AddVolumeOutput("LIMITER_DISSIPATION", "Limiter_Omega", "LIMITER", "Limiter value of dissipation rate");
+        break;
+      
+      case TURB_FAMILY::WA:
+        AddVolumeOutput("LIMITER_R", "Limiter_R", "LIMITER", "Limiter value of the Wray-Agarwal variable");
         break;
 
       case TURB_FAMILY::NONE:
@@ -1533,6 +1568,14 @@ void CFlowOutput::LoadVolumeDataScalar(const CConfig* config, const CSolver* con
       if (limiter) {
         SetVolumeOutputValue("LIMITER_TKE", iPoint, Node_Turb->GetLimiter(iPoint, 0));
         SetVolumeOutputValue("LIMITER_DISSIPATION", iPoint, Node_Turb->GetLimiter(iPoint, 1));
+      }
+      break;
+    
+    case TURB_FAMILY::WA:
+      SetVolumeOutputValue("R", iPoint, Node_Turb->GetSolution(iPoint, 0));
+      SetVolumeOutputValue("RES_R", iPoint, turb_solver->LinSysRes(iPoint, 0));
+      if (limiter) {
+        SetVolumeOutputValue("LIMITER_R", iPoint, Node_Turb->GetLimiter(iPoint, 0));
       }
       break;
 
@@ -2659,6 +2702,10 @@ void CFlowOutput::WriteForcesBreakdown(const CConfig* config, const CSolver* flo
             file << "Menter's SST with sustaining terms\n";
           else
             file << "Menter's SST\n";
+         break;
+        case TURB_MODEL::WA:
+          /// TODO: add the submodels here
+          file << "Wray Agarwal\n";
          break;
       }
       if (transition) {

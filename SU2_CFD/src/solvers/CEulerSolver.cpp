@@ -8919,6 +8919,7 @@ void CEulerSolver::TurboAverageProcess(CSolver **solver, CGeometry *geometry, CC
   const bool turbulent = (config->GetKind_Turb_Model() != TURB_MODEL::NONE);
   const bool spalart_allmaras = (config->GetKind_Turb_Model() == TURB_MODEL::SA);
   const bool menter_sst       = (config->GetKind_Turb_Model() == TURB_MODEL::SST);
+  const bool wray_agarwal     = (config->GetKind_Turb_Model() == TURB_MODEL::WA);
   const auto nSpanWiseSections = config->GetnSpanWiseSections();
 
   for (auto iSpan= 0; iSpan < nSpanWiseSections + 1; iSpan++){

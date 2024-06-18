@@ -78,11 +78,13 @@ void CMixingPlaneInterface::GetDonor_Variable(CSolver *donor_solution, CGeometry
     Donor_Variable[5] = donor_solution->GetAverageNu(Marker_Donor, iSpan);
     Donor_Variable[6] = donor_solution->GetAverageKine(Marker_Donor, iSpan);
     Donor_Variable[7] = donor_solution->GetAverageOmega(Marker_Donor, iSpan);
+    Donor_Variable[8] = donor_solution->GetAverageR(Marker_Donor, iSpan);
   }
   else{
     Donor_Variable[5] = -1.0;
     Donor_Variable[6] = -1.0;
     Donor_Variable[7] = -1.0;
+    Donor_Variable[8] = -1.0;
   }
 
 }
@@ -109,6 +111,7 @@ void CMixingPlaneInterface::SetTarget_Variable(CSolver *target_solution, CGeomet
     target_solution->SetExtAverageNu(Marker_Target, iSpan, Target_Variable[5]);
     target_solution->SetExtAverageKine(Marker_Target, iSpan, Target_Variable[6]);
     target_solution->SetExtAverageOmega(Marker_Target, iSpan,  Target_Variable[7]);
+    target_solution->SetExtAverageR(Marker_Target, iSpan,  Target_Variable[8]);
   }
 
 }
@@ -130,9 +133,11 @@ void CMixingPlaneInterface::SetAverageValues(CSolver *donor_solution, CSolver *t
     target_solution->SetKineIn(donor_solution->GetKineIn(donorZone, iSpan), donorZone, iSpan);
     target_solution->SetOmegaIn(donor_solution->GetOmegaIn(donorZone, iSpan), donorZone, iSpan);
     target_solution->SetNuIn(donor_solution->GetNuIn(donorZone, iSpan), donorZone, iSpan);
+    target_solution->SetRIn(donor_solution->GetRIn(donorZone, iSpan), donorZone, iSpan);
     target_solution->SetKineOut(donor_solution->GetKineOut(donorZone, iSpan), donorZone, iSpan);
     target_solution->SetOmegaOut(donor_solution->GetOmegaOut(donorZone, iSpan), donorZone, iSpan);
     target_solution->SetNuOut(donor_solution->GetNuOut(donorZone, iSpan), donorZone, iSpan);
+    target_solution->SetROut(donor_solution->GetROut(donorZone, iSpan), donorZone, iSpan);
 
   }
 }

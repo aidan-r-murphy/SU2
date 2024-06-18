@@ -35,6 +35,7 @@
 #include "../../include/solvers/CNEMONSSolver.hpp"
 #include "../../include/solvers/CTurbSASolver.hpp"
 #include "../../include/solvers/CTurbSSTSolver.hpp"
+#include "../../include/solvers/CTurbWASolver.hpp"
 #include "../../include/solvers/CTransLMSolver.hpp"
 #include "../../include/solvers/CAdjEulerSolver.hpp"
 #include "../../include/solvers/CAdjNSSolver.hpp"
@@ -305,6 +306,7 @@ CSolver* CSolverFactory::CreateSubSolver(SUB_SOLVER_TYPE kindSolver, CSolver **s
     case SUB_SOLVER_TYPE::TURB:
     case SUB_SOLVER_TYPE::TURB_SA:
     case SUB_SOLVER_TYPE::TURB_SST:
+    case SUB_SOLVER_TYPE::TURB_WA:
       genericSolver = CreateTurbSolver(kindTurbModel, solver, geometry, config, iMGLevel, false);
       metaData.integrationType = INTEGRATION_TYPE::SINGLEGRID;
       break;
@@ -349,6 +351,12 @@ CSolver* CSolverFactory::CreateTurbSolver(TURB_MODEL kindTurbModel, CSolver **so
         break;
       case TURB_FAMILY::KW:
         turbSolver = new CTurbSSTSolver(geometry, config, iMGLevel);
+        solver[FLOW_SOL]->Preprocessing(geometry, solver, config, iMGLevel, NO_RK_ITER, RUNTIME_FLOW_SYS, false);
+        turbSolver->Postprocessing(geometry, solver, config, iMGLevel);
+        solver[FLOW_SOL]->Preprocessing(geometry, solver, config, iMGLevel, NO_RK_ITER, RUNTIME_FLOW_SYS, false);
+        break;
+      case TURB_FAMILY::WA:
+        turbSolver = new CTurbWASolver(geometry, config, iMGLevel, solver[FLOW_SOL]->GetFluidModel());
         solver[FLOW_SOL]->Preprocessing(geometry, solver, config, iMGLevel, NO_RK_ITER, RUNTIME_FLOW_SYS, false);
         turbSolver->Postprocessing(geometry, solver, config, iMGLevel);
         solver[FLOW_SOL]->Preprocessing(geometry, solver, config, iMGLevel, NO_RK_ITER, RUNTIME_FLOW_SYS, false);

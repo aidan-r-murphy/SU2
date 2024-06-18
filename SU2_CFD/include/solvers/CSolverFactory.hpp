@@ -58,6 +58,7 @@ enum class SUB_SOLVER_TYPE {
   TRANSITION,              /*!< \brief Transition model solver*/
   TURB_SA,                 /*!< \brief SA turbulence model solver */
   TURB_SST,                /*!< \brief SST turbulence model solver */
+  TURB_WA,                 /*!< \brief WA turbulence model solver */
   TURB,                    /*!< \brief Turbulence model solver */
   SPECIES,                 /*!< \brief Species model solver */
   MESH,                    /*!< \brief Mesh solver */

@@ -947,11 +947,13 @@ enum class TURB_MODEL {
   NONE,      /*!< \brief No turbulence model. */
   SA,        /*!< \brief Kind of Turbulent model (Spalart-Allmaras). */
   SST,       /*!< \brief Kind of Turbulence model (Menter SST). */
+  WA,        /*!< \brief Kind of Turbulent model (Wray-Agarwal). */
 };
 static const MapType<std::string, TURB_MODEL> Turb_Model_Map = {
   MakePair("NONE", TURB_MODEL::NONE)
   MakePair("SA", TURB_MODEL::SA)
   MakePair("SST", TURB_MODEL::SST)
+  MakePair("WA", TURB_MODEL::WA)
 };
 
 /*!
@@ -961,6 +963,7 @@ enum class TURB_FAMILY {
   NONE,   /*!< \brief No turbulence model. */
   SA,     /*!< \brief Spalart-Allmaras variants. */
   KW,     /*!< \brief k-w models. */
+  WA,     /*!< \brief Wray-Agarwal variants. */
 };
 /*!
  * \brief Associate turb models with their family
@@ -973,6 +976,8 @@ inline TURB_FAMILY TurbModelFamily(TURB_MODEL model) {
       return TURB_FAMILY::SA;
     case TURB_MODEL::SST:
       return TURB_FAMILY::KW;
+    case TURB_MODEL::WA:
+      return TURB_FAMILY::WA;
   }
   return TURB_FAMILY::NONE;
 }
@@ -1176,6 +1181,41 @@ inline SA_ParsedOptions ParseSAOptions(const SA_OPTIONS *SA_Options, unsigned sh
     }
   }
   return SAParsedOptions;
+}
+
+/*!
+ * \brief WA Options
+ */
+enum class WA_OPTIONS {
+  NONE,     /*!< \brief No option / default. */
+};
+static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
+  MakePair("NONE", WA_OPTIONS::NONE)
+};
+
+/*!
+ * \brief Structure containing parsed WA options.
+ */
+struct WA_ParsedOptions {
+  WA_OPTIONS version = WA_OPTIONS::NONE;  /*!< \brief WA base model. */
+};
+
+/*!
+ * \brief Function to parse WA options.
+ * \param[in] WA_Options - Selected WA option from config.
+ * \param[in] nWA_Options - Number of options selected.
+ * \param[in] rank - MPI rank.
+ * \return Struct with WA options.
+ */
+inline WA_ParsedOptions ParseWAOptions(const WA_OPTIONS *WA_Options, unsigned short nWA_Options, int rank) {
+  WA_ParsedOptions WAParsedOptions;
+
+  auto IsPresent = [&](WA_OPTIONS option) {
+    const auto wa_options_end = WA_Options + nWA_Options;
+    return std::find(WA_Options, wa_options_end, option) != wa_options_end;
+  };
+
+  return WAParsedOptions;
 }
 
 /*!

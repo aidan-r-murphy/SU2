@@ -3162,6 +3162,12 @@ public:
   inline virtual su2double GetOmega_Inf(void) const { return 0; }
 
   /*!
+   * \brief A virtual member.
+   * \return Value of R at the far-field.
+   */
+  inline virtual su2double GetR_Inf(void) const { return 0; }
+
+  /*!
    * \brief Get value of the Intermittency.
    * \return Value of the Intermittency.
    */
@@ -3840,6 +3846,13 @@ public:
   /*!
    * \brief A virtual member.
    * \param[in] val_marker - bound marker.
+   * \return Value of the Average R on the surface <i>val_marker</i>.
+   */
+  inline virtual su2double GetAverageR(unsigned short valMarker, unsigned short valSpan) const { return 0.0; }
+
+  /*!
+   * \brief A virtual member.
+   * \param[in] val_marker - bound marker.
    * \return Value of the Average Nu on the surface <i>val_marker</i>.
    */
   inline virtual su2double GetExtAverageNu(unsigned short valMarker, unsigned short valSpan) const { return 0.0; }
@@ -3857,6 +3870,13 @@ public:
    * \return Value of the Average Omega on the surface <i>val_marker</i>.
    */
   inline virtual su2double GetExtAverageOmega(unsigned short valMarker, unsigned short valSpan) const { return 0.0; }
+
+  /*!
+   * \brief A virtual member.
+   * \param[in] val_marker - bound marker.
+   * \return Value of the Average R on the surface <i>val_marker</i>.
+   */
+  inline virtual su2double GetExtAverageR(unsigned short valMarker, unsigned short valSpan) const { return 0.0; }
 
   /*!
    * \brief A virtual member.
@@ -3912,6 +3932,15 @@ public:
   inline virtual void SetExtAverageOmega(unsigned short valMarker,
                                          unsigned short valSpan,
                                          su2double valOmega) { }
+
+  /*!
+   * \brief A virtual member.
+   * \param[in] val_marker - bound marker.
+   * \return Value of the Average R on the surface <i>val_marker</i>.
+   */
+  inline virtual void SetExtAverageR(unsigned short valMarker,
+                                      unsigned short valSpan,
+                                      su2double valR) { }
 
   /*!
    * \brief A virtual member.
@@ -3981,6 +4010,13 @@ public:
    * \param[in] inMarkerTP - bound marker.
    * \return Value of the inlet density.
    */
+  inline virtual su2double GetRIn(unsigned short inMarkerTP, unsigned short valSpan) const {return 0;}
+
+  /*!
+   * \brief A virtual member.
+   * \param[in] inMarkerTP - bound marker.
+   * \return Value of the inlet density.
+   */
   inline virtual su2double GetKineOut(unsigned short inMarkerTP, unsigned short valSpan) const {return 0;}
 
   /*!
@@ -3996,6 +4032,13 @@ public:
    * \return Value of the inlet density.
    */
   inline virtual su2double GetNuOut(unsigned short inMarkerTP, unsigned short valSpan) const {return 0;}
+
+  /*!
+   * \brief A virtual member.
+   * \param[in] inMarkerTP - bound marker.
+   * \return Value of the inlet density.
+   */
+  inline virtual su2double GetROut(unsigned short inMarkerTP, unsigned short valSpan) const {return 0;}
 
   /*!
    * \brief A virtual member.
@@ -4083,6 +4126,15 @@ public:
    * \param[in] value      - turboperformance value to set.
    * \param[in] inMarkerTP - turboperformance marker.
    */
+  inline virtual void SetRIn(su2double value,
+                              unsigned short inMarkerTP,
+                              unsigned short valSpan) { }
+
+  /*!
+   * \brief A virtual member.
+   * \param[in] value      - turboperformance value to set.
+   * \param[in] inMarkerTP - turboperformance marker.
+   */
   inline virtual void SetKineOut(su2double value,
                                  unsigned short inMarkerTP,
                                  unsigned short valSpan) { }
@@ -4102,6 +4154,15 @@ public:
    * \param[in] inMarkerTP - turboperformance marker.
    */
   inline virtual void SetNuOut(su2double value,
+                               unsigned short inMarkerTP,
+                               unsigned short valSpan) { }
+
+  /*!
+   * \brief A virtual member.
+   * \param[in] value      - turboperformance value to set.
+   * \param[in] inMarkerTP - turboperformance marker.
+   */
+  inline virtual void SetROut(su2double value,
                                unsigned short inMarkerTP,
                                unsigned short valSpan) { }
 

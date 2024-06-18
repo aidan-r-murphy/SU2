@@ -1117,6 +1117,8 @@ void CConfig::SetConfig_Options() {
   addEnumListOption("SST_OPTIONS", nSST_Options, SST_Options, SST_Options_Map);
   /*!\brief SST_OPTIONS \n DESCRIPTION: Specify SA turbulence model options/corrections. \n Options: see \link SA_Options_Map \endlink \n DEFAULT: NONE \ingroup Config*/
   addEnumListOption("SA_OPTIONS", nSA_Options, SA_Options, SA_Options_Map);
+  /*!\brief WA_OPTIONS \n DESCRIPTION: Specify WA turbulence model options/corrections. \n Options: see \link WA_Options_Map \endlink \n DEFAULT: NONE \ingroup Config*/
+  addEnumListOption("WA_OPTIONS", nWA_Options, WA_Options, WA_Options_Map);
 
   /*!\brief KIND_TRANS_MODEL \n DESCRIPTION: Specify transition model OPTIONS: see \link Trans_Model_Map \endlink \n DEFAULT: NONE \ingroup Config*/
   addEnumOption("KIND_TRANS_MODEL", Kind_Trans_Model, Trans_Model_Map, TURB_TRANS_MODEL::NONE);
@@ -1419,6 +1421,8 @@ void CConfig::SetConfig_Options() {
   addDoubleOption("FREESTREAM_TURBULENCEINTENSITY", TurbIntensityAndViscRatioFreeStream[0], 0.05);
   /* DESCRIPTION:  */
   addDoubleOption("FREESTREAM_NU_FACTOR", NuFactor_FreeStream, 3.0);
+  /* DESCRIPTION:  */
+  addDoubleOption("FREESTREAM_R_FACTOR", RFactor_FreeStream, 3.0);
   /* DESCRIPTION:  */
   addDoubleOption("ENGINE_NU_FACTOR", NuFactor_Engine, 3.0);
   /* DESCRIPTION:  */
@@ -3473,6 +3477,8 @@ void CConfig::SetPostprocessing(SU2_COMPONENT val_software, unsigned short val_i
     sstParsedOptions = ParseSSTOptions(SST_Options, nSST_Options, rank);
   } else if (Kind_Turb_Model == TURB_MODEL::SA) {
     saParsedOptions = ParseSAOptions(SA_Options, nSA_Options, rank);
+  } else if (Kind_Turb_Model == TURB_MODEL::WA) {
+    waParsedOptions = ParseWAOptions(WA_Options, nWA_Options, rank);
   }
 
   /*--- Check if turbulence model can be used for AXISYMMETRIC case---*/
@@ -5441,6 +5447,8 @@ void CConfig::SetPostprocessing(SU2_COMPONENT val_software, unsigned short val_i
       nTurbVar = 1; break;
     case TURB_FAMILY::KW:
       nTurbVar = 2; break;
+    case TURB_FAMILY::WA:
+      nTurbVar = 1; break;
   }
   /*--- Check whether the number of entries of the MARKER_INLET_TURBULENT equals the number of turbulent properties
        used for the respective turbulent model. nTurb_Properties must be equal to 1 or 2 depending on whether SA or
@@ -5455,6 +5463,12 @@ void CConfig::SetPostprocessing(SU2_COMPONENT val_software, unsigned short val_i
         "The use of MARKER_INLET_TURBULENT requires the number of entries when SA Model is used \n"
         "to be equal to 1 : ratio turbulent to laminar viscosity",
         CURRENT_FUNCTION);
+  if (Marker_Inlet_Turb != nullptr && Kind_Turb_Model == TURB_MODEL::WA && nTurb_Properties != 1)
+    SU2_MPI::Error(
+        "The use of MARKER_INLET_TURBULENT requires the number of entries when WA Model is used \n"
+        "to be equal to 1 : ratio turbulent to laminar viscosity",
+        CURRENT_FUNCTION);
+
 
   /*--- Checks for additional species transport. ---*/
   if ((Kind_Species_Model == SPECIES_MODEL::SPECIES_TRANSPORT) || (Kind_Species_Model == SPECIES_MODEL::FLAMELET)) {
@@ -6139,6 +6153,9 @@ void CConfig::SetOutput(SU2_COMPONENT val_software, unsigned short val_izone) {
                 break;
               case SA_OPTIONS::EDW:
                 cout << "Edwards-";
+                break;
+              case SA_OPTIONS::CATRIS:
+                cout << "Catris-";
                 break;
               default:
                 break;
@@ -8963,6 +8980,9 @@ const su2double* CConfig::GetInlet_TurbVal(const string& val_marker) const {
   }
   if (Kind_Turb_Model == TURB_MODEL::SST) {
     return TurbIntensityAndViscRatioFreeStream;
+  }
+  if (Kind_Turb_Model == TURB_MODEL::WA) {
+    return &RFactor_FreeStream;
   }
   return &NuFactor_FreeStream;
 }

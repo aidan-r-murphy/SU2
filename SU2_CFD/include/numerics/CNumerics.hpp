@@ -708,6 +708,14 @@ public:
   virtual void SetCrossDiff(su2double val_CDkw_i) {/* empty */};
 
   /*!
+   * \brief Set the value of the WA model switching function.
+   * \param[in] val_f1_i - Value of the WA switching function at point i.
+   * \param[in] val_f1_j - Value of the WA switching function at point j.
+   */
+  virtual void Setf1Switching(su2double val_f1_i, su2double val_f1_j) {/* empty */};
+
+
+  /*!
    * \brief Set the value of the effective intermittency for the LM model.
    * \param[in] intermittency_eff_i - Value of the effective intermittency at point i.
    */
