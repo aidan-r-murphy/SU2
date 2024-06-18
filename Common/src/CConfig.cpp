@@ -6193,6 +6193,10 @@ void CConfig::SetOutput(SU2_COMPONENT val_software, unsigned short val_izone) {
             }
             cout << "." << endl;
             break;
+          case TURB_MODEL::WA:
+            cout << "Wray-Agarwal";
+            cout << endl;
+            break;
         }
         switch (Kind_Trans_Model) {
           case TURB_TRANS_MODEL::NONE:  break;

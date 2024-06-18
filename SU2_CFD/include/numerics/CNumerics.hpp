@@ -714,7 +714,6 @@ public:
    */
   virtual void Setf1Switching(su2double val_f1_i, su2double val_f1_j) {/* empty */};
 
-
   /*!
    * \brief Set the value of the effective intermittency for the LM model.
    * \param[in] intermittency_eff_i - Value of the effective intermittency at point i.
