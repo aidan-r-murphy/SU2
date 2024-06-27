@@ -37,7 +37,7 @@
 
 class CTurbWASolver final : public CTurbSolver {
 private:
-  su2double constants[8] = {0.0}; /*!< \brief Constants for the model. */
+  su2double constants[9] = {0.0}; /*!< \brief Constants for the model. */
   WA_ParsedOptions waParsedOptions;
 
   /*!

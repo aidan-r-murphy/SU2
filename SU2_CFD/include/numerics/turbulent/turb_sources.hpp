@@ -986,8 +986,8 @@ class CSourcePieceWise_TurbWA : public CNumerics {
     StrainMag_i = max(StrainMag_i, 1.0e-16);
 
     su2double GradR_dot_GradS = GeometryToolbox::DotProduct(nDim, ScalarVar_Grad_i[0], AuxVar_Grad_i[0]);
-    su2double StrainMag_Grad2_i = GeometryToolbox::Norm(nDim, AuxVar_Grad_i[0]);
-    su2double ScalarVar_Grad2_i = GeometryToolbox::Norm(nDim, ScalarVar_Grad_i[0]);
+    su2double StrainMag_Grad2_i = GeometryToolbox::SquaredNorm(nDim, AuxVar_Grad_i[0]);
+    su2double ScalarVar_Grad2_i = GeometryToolbox::SquaredNorm(nDim, ScalarVar_Grad_i[0]);
     su2double S2 = pow(StrainMag_i, 2.0);
 
     /* --- Computation of switching function constants for the source terms --- */

@@ -199,7 +199,7 @@ void CTurbWASolver::Postprocessing(CGeometry *geometry, CSolver **solver_contain
     const su2double Xi_3 = Xi*Xi*Xi;
     const su2double fmu  = Xi_3/(Xi_3+Cw_3);
 
-    const su2double muT = rho*fmu*R;
+    su2double muT = rho*fmu*R;
 
     nodes->SetmuT(iPoint,muT);
 
