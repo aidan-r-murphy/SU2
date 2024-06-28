@@ -99,6 +99,11 @@ CTurbWASolver::CTurbWASolver(CGeometry *geometry, CConfig *config, unsigned shor
 
   constants[8] = 8.0;       // C_m
 
+  if (waParsedOptions.version == WA_OPTIONS::V2018) {
+    constants[1] = 0.1284;  // C_1kepsilon
+    constants[9] = 0.09;    // C_mu
+  }
+  
   /*--- Read farfield conditions from config ---*/
   su2double Density_Inf, LaminarViscosity_Inf, Factor_R_Inf, muT_Inf;
 

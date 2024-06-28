@@ -923,7 +923,7 @@ class CSourcePieceWise_TurbWA : public CNumerics {
   const FlowIndices idx; /*!< \brief Object to manage the access to the flow primitives. */
 
   /*--- Closure constants ---*/
-  const su2double C_1_kom, C_1_keps, sigma_kom, sigma_keps, kappa, C_om, C_2kom, C_2keps, C_m;
+  const su2double C_1_kom, C_1_keps, sigma_kom, sigma_keps, kappa, C_om, C_2kom, C_2keps, C_m, C_mu;
 
   /*--- Residual and Jacobian ---*/
   su2double f1_i;
@@ -948,7 +948,8 @@ class CSourcePieceWise_TurbWA : public CNumerics {
         C_om(constants[5]),
         C_2kom(constants[6]),
         C_2keps(constants[7]),
-        C_m(constants[8]) {
+        C_m(constants[8]),
+        C_mu(constants[9]) {
     /*--- Setup the Jacobian pointer, we need to return su2double** but we know
      * the Jacobian is 1x1 so we use this trick to avoid heap allocation. ---*/
     Jacobian_i = &Jacobian_Buffer;
@@ -1005,7 +1006,12 @@ class CSourcePieceWise_TurbWA : public CNumerics {
       su2double Dest1 = f1_i * C_2kom * ScalarVar_i[0] / StrainMag_i * GradR_dot_GradS;
 
       /* --- Second Destruction term --- */
-      su2double Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2), C_m*ScalarVar_Grad2_i);
+      su2double Dest2;
+      if (waParsedOptions.version == WA_OPTIONS::V2017) {
+        Dest2 = (1.0 - f1_i) * C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2);
+      } else {
+        Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2), C_m*ScalarVar_Grad2_i);
+      }
 
       /* --- Add the production term to the residual and Jacobian. --- */
       Residual += Prod * Volume;
@@ -1017,7 +1023,6 @@ class CSourcePieceWise_TurbWA : public CNumerics {
 
       /* --- Add the second destruction term to the residual (treat this term as explicit). --- */
       Residual -= Dest2 * Volume;
-      // Jacobian_i[0] -= ((1.0 - f1_i) * C_2keps * 2.0 * ScalarVar_i[0] * (StrainMag_Grad2_i / S2))*Volume;
     }
 
     AD::SetPreaccOut(Residual);

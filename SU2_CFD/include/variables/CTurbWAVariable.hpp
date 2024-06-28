@@ -42,6 +42,7 @@ protected:
   su2double C_1kepsilon;
   su2double sigma_komega;
   su2double sigma_kepsilon;
+  su2double C_mu;
   VectorType f1;    /*!< \brief WA-2017 switching function. */  
   WA_ParsedOptions waParsedOptions;
 public:

@@ -46,6 +46,7 @@ CTurbWAVariable::CTurbWAVariable(su2double val_R, su2double val_muT, unsigned lo
   C_1kepsilon = constants[1];
   sigma_komega = constants[2];
   sigma_kepsilon = constants[3];
+  C_mu = constants[9];
 
   f1.resize(nPoint) = su2double(1.0);
 
@@ -62,6 +63,7 @@ void CTurbWAVariable::SetSwitchingFunc(unsigned long iPoint, const su2double Vor
   
   su2double W, S;
   su2double numerator, denominator;
+  su2double k, omega, eta;
   su2double EPS = 1.0e-16; /*!< \brief Error scale for mean strain. */
 
   AD::StartPreacc();
@@ -76,11 +78,21 @@ void CTurbWAVariable::SetSwitchingFunc(unsigned long iPoint, const su2double Vor
   S = max(StrainMag_i, EPS);
 
   /* --- f1 --- */
-  numerator = 1.0 + val_dist*sqrt(Solution(iPoint,0)*S)*val_density/val_viscosity;
-  denominator = 1.0 + pow((max(val_dist*sqrt(Solution(iPoint,0)*S),1.5*Solution(iPoint,0))) / 
-                          (20.0*val_viscosity/val_density),2.0);
-  arg1 = numerator/denominator;
-  f1(iPoint) = min(tanh(pow(arg1,4.0)),0.9);
+  if (waParsedOptions.version == WA_OPTIONS::V2018) { // WA WDF 2018
+    k = muT(iPoint)/val_density * S / sqrt(C_mu);
+    omega = S / sqrt(C_mu);
+    eta = S * max(1.0,abs(W/S));
+
+    arg1 = (val_viscosity/val_density + Solution(iPoint,0))/2.0 * pow(eta,2.0)/(C_mu * k * omega);
+
+    f1(iPoint) = tanh(pow(arg1,4.0));
+  } else { // WA 2017 or 2017m
+    numerator = 1.0 + val_dist*sqrt(Solution(iPoint,0)*S)*val_density/val_viscosity;
+    denominator = 1.0 + pow((max(val_dist*sqrt(Solution(iPoint,0)*S),1.5*Solution(iPoint,0))) / 
+                            (20.0*val_viscosity/val_density),2.0);
+    arg1 = numerator/denominator;
+    f1(iPoint) = min(tanh(pow(arg1,4.0)),0.9);
+  }
 
   AD::SetPreaccOut(f1(iPoint));
   AD::EndPreacc();

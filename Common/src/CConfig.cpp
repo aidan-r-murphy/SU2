@@ -6195,7 +6195,14 @@ void CConfig::SetOutput(SU2_COMPONENT val_software, unsigned short val_izone) {
             break;
           case TURB_MODEL::WA:
             cout << "Wray-Agarwal";
-            cout << endl;
+            if (waParsedOptions.version == WA_OPTIONS::V2018) {
+              cout << "-2018";
+            } else if (waParsedOptions.version == WA_OPTIONS::V2017) {
+              cout << "-2017";
+            } else {
+              cout << "-2017m";
+            }
+            cout << "." << endl;
             break;
         }
         switch (Kind_Trans_Model) {

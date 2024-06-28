@@ -68,6 +68,7 @@ CNumerics::CNumerics(unsigned short val_nDim, unsigned short val_nVar,
 
   /* --- Initializing variables for the UQ methodology --- */
   sstParsedOptions = config->GetSSTParsedOptions();
+  waParsedOptions = config->GetWAParsedOptions();
   Eig_Val_Comp = config->GetEig_Val_Comp();
   uq_delta_b = config->GetUQ_Delta_B();
   uq_urlx = config->GetUQ_URLX();
