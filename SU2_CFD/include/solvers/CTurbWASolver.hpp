@@ -266,12 +266,8 @@ public:
    * \param config - Definition of the particular problem.
    * \return Value of the face area at the vertex.
    */
-  su2double GetInletAtVertex(su2double *val_inlet,
-                             unsigned long val_inlet_point,
-                             unsigned short val_kind_marker,
-                             string val_marker,
-                             const CGeometry *geometry,
-                             const CConfig *config) const override;
+  su2double GetInletAtVertex(unsigned short iMarker, unsigned long iVertex,
+                             const CGeometry* geometry, su2double* val_inlet) const override;
 
   /*!
    * \brief Set a uniform inlet profile
