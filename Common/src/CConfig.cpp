@@ -6294,9 +6294,12 @@ void CConfig::SetOutput(SU2_COMPONENT val_software, unsigned short val_izone) {
               cout << "-2018";
             } else if (waParsedOptions.version == WA_OPTIONS::V2017) {
               cout << "-2017";
+            } else if (waParsedOptions.version == WA_OPTIONS::CATRIS) {
+              cout << "-Catris";
             } else {
               cout << "-2017m";
             }
+            if (waParsedOptions.at) cout << "-AT";
             cout << "." << endl;
             break;
         }
@@ -6327,6 +6330,7 @@ void CConfig::SetOutput(SU2_COMPONENT val_software, unsigned short val_izone) {
               switch (Kind_Turb_Model) {
                 case TURB_MODEL::SA: cout << "Malan et al. (2009)" << endl;  break;
                 case TURB_MODEL::SST: cout << "Menter and Langtry (2009)" << endl;  break;
+                case TURB_MODEL::WA: SU2_MPI::Error("WA model is not compatible with the LM transition model.", CURRENT_FUNCTION); break;
                 case TURB_MODEL::NONE: SU2_MPI::Error("No turbulence model has been selected but LM transition model is active.", CURRENT_FUNCTION); break;
               }
               break;

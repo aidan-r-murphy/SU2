@@ -404,19 +404,12 @@ private:
   void FinishResidualCalc(const CConfig* config) override {
     const bool implicit = config->GetKind_TimeIntScheme() == EULER_IMPLICIT;
 
-    /*--- Compute mean effective viscosity ---*/
-    const su2double nu_i = Laminar_Viscosity_i/Density_i;
-    const su2double nu_j = Laminar_Viscosity_j/Density_j;
-    const su2double nu_ij = 0.5*(nu_i+nu_j);
-
     /* --- Compute constants from switching function --- */
     const su2double sigma_R_i = f1_i*(sigma_kom - sigma_keps) + sigma_keps;
     const su2double sigma_R_j = f1_j*(sigma_kom - sigma_keps) + sigma_keps;
 
-    /* --- Compute mean effective dynamic viscosity --- */
     const su2double diff_i_R = sigma_R_i*ScalarVar_i[0] + Laminar_Viscosity_i/Density_i;
     const su2double diff_j_R = sigma_R_j*ScalarVar_j[0] + Laminar_Viscosity_j/Density_j;
-
     const su2double diff_R = 0.5*(diff_i_R + diff_j_R);
 
     Flux[0] = diff_R*Proj_Mean_GradScalarVar[0];
@@ -453,3 +446,119 @@ public:
   }
 };
 
+/*!
+ * \class CAvgGrad_TurbWA_Catris
+ * \brief Class for computing viscous term using average of gradients (Wray-Agarwal turbulence model).
+ * \ingroup ViscDiscr
+ * \author A. Murphy.
+ */
+template <class FlowIndices>
+class CAvgGrad_TurbWA_Catris final : public CAvgGrad_Scalar<FlowIndices> {
+private:
+  using Base = CAvgGrad_Scalar<FlowIndices>;
+  using Base::Laminar_Viscosity_i;
+  using Base::Laminar_Viscosity_j;
+  using Base::Density_i;
+  using Base::Density_j;
+  using Base::ScalarVar_i;
+  using Base::ScalarVar_j;
+  using Base::Proj_Mean_GradScalarVar;
+  using Base::AuxVar_Grad_i;
+  using Base::AuxVar_Grad_j;
+  using Base::Flux;
+  using Base::Jacobian_i;
+  using Base::Jacobian_j;
+  using Base::nDim;
+  using Base::Normal;
+  using Base::correct_gradient;
+  using Base::Coord_i;
+  using Base::Coord_j;
+  
+
+  const su2double sigma_kom; /*!< \brief Constants for the switching function terms */
+  const su2double sigma_keps;
+
+  su2double f1_i, f1_j; /*!< \brief WA model switching function */
+
+  /*!
+   * \brief Adds any extra variables to AD
+   */
+  void ExtraADPreaccIn() override {
+    AD::SetPreaccIn(f1_i, f1_j);
+  }
+
+  /*!
+   * \brief WA specific steps in the ComputeResidual method
+   * \param[in] config - Definition of the particular problem.
+   */
+  void FinishResidualCalc(const CConfig* config) override {
+    const bool implicit = config->GetKind_TimeIntScheme() == EULER_IMPLICIT;
+
+    /*--- Compute mean effective viscosity ---*/
+    const su2double nu_i = Laminar_Viscosity_i/Density_i;
+    const su2double nu_j = Laminar_Viscosity_j/Density_j;
+    const su2double nu_ij = 0.5*(nu_i+nu_j);
+
+    /* --- Compute constants from switching function --- */
+    const su2double sigma_R_i = f1_i*(sigma_kom - sigma_keps) + sigma_keps;
+    const su2double sigma_R_j = f1_j*(sigma_kom - sigma_keps) + sigma_keps;
+
+    const su2double diff_i_R = sigma_R_i*ScalarVar_i[0]/sqrt(Density_i);
+    const su2double diff_j_R = sigma_R_j*ScalarVar_j[0]/sqrt(Density_j);
+    const su2double diff_R = 0.5*(diff_i_R + diff_j_R);
+
+    su2double edgeVec[3], dist_ij_2 = 0.0, proj_vector_ij = 0.0, projNormal[1], edgeProj = 0.0, projCorrected[1];
+    
+    assert(nDim == 2 || nDim == 3);
+    nDim = (nDim > 2)? 3 : 2;
+
+    for (int iDim = 0; iDim < nDim; iDim++) {
+      edgeVec[iDim] = Coord_j[iDim] - Coord_i[iDim];
+      dist_ij_2 += pow(edgeVec[iDim], 2);
+      proj_vector_ij += edgeVec[iDim] * Normal[iDim];
+    }
+    proj_vector_ij /= max(dist_ij_2,1.0E-16);
+
+    /*--- Mean gradient approximation. ---*/
+    for (int iDim = 0; iDim < nDim; iDim++) {
+      su2double meanGrad = 0.5 * (AuxVar_Grad_i[1][iDim] + AuxVar_Grad_j[1][iDim]);
+      projNormal[0] += meanGrad * Normal[iDim];
+      if (correct_gradient) edgeProj += meanGrad * edgeVec[iDim];
+    }
+
+    projCorrected[0] = projNormal[0];
+    if (correct_gradient) projCorrected[0] -= (edgeProj - (sqrt(Density_j)*ScalarVar_j[0]-sqrt(Density_i)*ScalarVar_i[0])) * proj_vector_ij;
+
+    Flux[0] = diff_R*projCorrected[0] + nu_ij*Proj_Mean_GradScalarVar[0];
+
+    /*--- For Jacobians -> Use of TSL (Thin Shear Layer) approx. to compute derivatives of the gradients ---*/
+    // TODO: Ensure Jacobian was computed correctly from the Flux
+    if (implicit) {
+      Jacobian_i[0][0] = (0.5*projCorrected[0] - diff_R*proj_vector_ij) + (0.5*Proj_Mean_GradScalarVar[0] - nu_ij*proj_vector_ij);
+      Jacobian_j[0][0] = (0.5*projCorrected[0] + diff_R*proj_vector_ij) + (0.5*Proj_Mean_GradScalarVar[0] + nu_ij*proj_vector_ij);
+    }
+  }
+
+public:
+  /*!
+   * \brief Constructor of the class.
+   * \param[in] val_nDim - Number of dimensions of the problem.
+   * \param[in] val_nVar - Number of variables of the problem.
+   * \param[in] constants - Constants of the model.
+   * \param[in] correct_grad - Whether to correct gradient for skewness.
+   * \param[in] config - Definition of the particular problem.
+   */
+  CAvgGrad_TurbWA_Catris(unsigned short val_nDim, unsigned short val_nVar,
+                   const su2double* constants, bool correct_grad, const CConfig* config)
+    : CAvgGrad_Scalar<FlowIndices>(val_nDim, val_nVar, correct_grad, config),
+      sigma_kom(constants[2]),
+      sigma_keps(constants[3]) { 
+  }
+
+  /*!
+   * \brief Sets value of WA model switching function.
+   */
+  void Setf1Switching(su2double val_f1_i, su2double val_f1_j) override {
+    f1_i = val_f1_i; f1_j = val_f1_j;
+  }
+};

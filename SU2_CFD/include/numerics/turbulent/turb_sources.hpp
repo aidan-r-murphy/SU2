@@ -990,6 +990,7 @@ template <class FlowIndices>
 class CSourcePieceWise_TurbWA : public CNumerics {
  private:
   const FlowIndices idx; /*!< \brief Object to manage the access to the flow primitives. */
+  const WA_ParsedOptions options; /*< \brief Struct with WA options. */
 
   /*--- Closure constants ---*/
   const su2double C_1_kom, C_1_keps, sigma_kom, sigma_keps, kappa, C_om, C_2kom, C_2keps, C_m, C_mu;
@@ -1009,6 +1010,7 @@ class CSourcePieceWise_TurbWA : public CNumerics {
   CSourcePieceWise_TurbWA(unsigned short val_nDim, unsigned short, const su2double* constants, const CConfig* config)
       : CNumerics(val_nDim, 1, config),
         idx(val_nDim, config->GetnSpecies()),
+        options(config->GetWAParsedOptions()),
         C_1_kom(constants[0]),
         C_1_keps(constants[1]),
         sigma_kom(constants[2]),
@@ -1044,10 +1046,14 @@ class CSourcePieceWise_TurbWA : public CNumerics {
     AD::SetPreaccIn(Vorticity_i, 3);
     AD::SetPreaccIn(ScalarVar_i[0]);
     AD::SetPreaccIn(ScalarVar_Grad_i[0], nDim);
-    AD::SetPreaccIn(AuxVar_Grad_i, nDim, nDim); // Strain Gradient
+    AD::SetPreaccIn(AuxVar_Grad_i, nDim, nDim);
     AD::SetPreaccIn(Volume);
     AD::SetPreaccIn(dist_i);
     AD::SetPreaccIn(f1_i);
+    AD::SetPreaccIn(V_i[idx.Density()], V_i[idx.LaminarViscosity()]);
+
+    Density_i = V_i[idx.Density()];
+    Laminar_Viscosity_i = V_i[idx.LaminarViscosity()];
 
     Residual = 0.0;
     Jacobian_i[0] = 0.0;
@@ -1059,26 +1065,57 @@ class CSourcePieceWise_TurbWA : public CNumerics {
     su2double StrainMag_Grad2_i = GeometryToolbox::SquaredNorm(nDim, AuxVar_Grad_i[0]);
     su2double ScalarVar_Grad2_i = GeometryToolbox::SquaredNorm(nDim, ScalarVar_Grad_i[0]);
     su2double S2 = pow(StrainMag_i, 2.0);
+    su2double intermittency = 1.0;
 
     /* --- Computation of switching function constants for the source terms --- */
-    su2double C1_switching = f1_i*(C_1_kom - C_1_keps) + C_1_keps; 
-    su2double sigmaR_switching = f1_i*(sigma_kom - sigma_keps) + sigma_keps; 
+    su2double C1_switching = f1_i*(C_1_kom - C_1_keps) + C_1_keps;
+    su2double sigmaR_switching = f1_i*(sigma_kom - sigma_keps) + sigma_keps;
 
     if (dist_i > 1e-10) {
+
+      const su2double Cw_3 = pow(C_om,3.0);
+      const su2double nu = Laminar_Viscosity_i/Density_i;
+      su2double Xi = ScalarVar_i[0]/nu;
+      su2double Xi_3 = Xi*Xi*Xi;
+      su2double fmu  = Xi_3/(Xi_3+Cw_3);
+
+      su2double dist_i_2 = pow(dist_i, 2.0);
+
       /*--- Vorticity ---*/
       const su2double VorticityMag = GeometryToolbox::Norm(3, Vorticity_i);
 
+      if (options.at) {
+        /*--- AT transition model. This should only be used with WA-2018. ---*/
+        const su2double chi_1 = 0.02;
+        const su2double chi_2 = 50.0;
+
+        /*--- Turbulence intensity is u'/U so we multiply by 100 to get percentage. ---*/
+        const su2double Tu_Inf = 100.0 * config->GetTurbulenceIntensity_FreeStream();
+        const su2double nu_t = ScalarVar_i[0] * fmu;
+
+        const su2double Re_v = Density_i * dist_i_2 / Laminar_Viscosity_i * VorticityMag;
+        const su2double Re_theta = Re_v / 2.193;
+        /*--- Menter correlation. ---*/
+        const su2double Re_theta_c = 803.73 * pow(Tu_Inf + 0.6067, -1.027);
+
+        const su2double Term1 = max(1.2*Re_theta - Re_theta_c, 0.0) / (chi_1 * Re_theta_c);
+        const su2double Term2 = max((nu_t / nu) / chi_2, 0.0);
+
+        intermittency_eff_i = 1.0 - exp(-sqrt(Term1)-sqrt(Term2));
+        intermittency = intermittency_eff_i;
+      }
+
       /* --- Production term --- */
-      su2double Prod = C1_switching * ScalarVar_i[0] * StrainMag_i;
+      su2double Prod = intermittency * C1_switching * ScalarVar_i[0] * StrainMag_i;
 
       /* --- First Destruction term --- */
       su2double Dest1 = f1_i * C_2kom * ScalarVar_i[0] / StrainMag_i * GradR_dot_GradS;
 
       /* --- Second Destruction term --- */
       su2double Dest2;
-      if (waParsedOptions.version == WA_OPTIONS::V2017) {
+      if (waParsedOptions.version == WA_OPTIONS::V2017) { // WA-2017
         Dest2 = (1.0 - f1_i) * C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2);
-      } else {
+      } else { // WA-2018 and WA-2017m
         Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2), C_m*ScalarVar_Grad2_i);
       }
 

@@ -53,6 +53,9 @@ CTurbWAVariable::CTurbWAVariable(su2double val_R, su2double val_muT, unsigned lo
   muT.resize(nPoint) = val_muT;
 
   nAuxVar = 1;
+  if (waParsedOptions.version == WA_OPTIONS::CATRIS) {
+    nAuxVar = 2;
+  }
   AuxVar.resize(nPoint,nAuxVar) = su2double(0.0);
   Grad_AuxVar.resize(nPoint,nAuxVar,nDim);
 }

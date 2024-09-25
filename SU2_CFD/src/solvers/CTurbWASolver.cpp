@@ -103,7 +103,7 @@ CTurbWASolver::CTurbWASolver(CGeometry *geometry, CConfig *config, unsigned shor
     constants[1] = 0.1284;  // C_1kepsilon
     constants[9] = 0.09;    // C_mu
   }
-  
+
   /*--- Read farfield conditions from config ---*/
   su2double Density_Inf, LaminarViscosity_Inf, Factor_R_Inf, muT_Inf;
 
@@ -113,6 +113,9 @@ CTurbWASolver::CTurbWASolver(CGeometry *geometry, CConfig *config, unsigned shor
   /*--- Factor_R_Inf in [3.0, 5.0] ---*/
   Factor_R_Inf = config->GetRFactor_FreeStream();
   su2double R_Inf  = Factor_R_Inf*LaminarViscosity_Inf/Density_Inf;
+  if (config->GetWAParsedOptions().at) {
+    R_Inf  = 0.002*LaminarViscosity_Inf/Density_Inf;
+  }
 
   Solution_Inf[0] = R_Inf;
 
@@ -171,6 +174,27 @@ void CTurbWASolver::Preprocessing(CGeometry *geometry, CSolver **solver_containe
         unsigned short iMesh, unsigned short iRKStep, unsigned short RunTime_EqSystem, bool Output) {
   SU2_OMP_SAFE_GLOBAL_ACCESS(config->SetGlobalParam(config->GetKind_Solver(), RunTime_EqSystem);)
 
+  auto* flowNodes = su2staticcast_p<CFlowVariable*>(solver_container[FLOW_SOL]->GetNodes());
+
+  AD::StartNoSharedReading();
+  
+  /* --- Set strain mag as auxiliary variable --- */
+  SU2_OMP_FOR_STAT(omp_chunk_size)
+  for (unsigned long iPoint = 0; iPoint < nPoint; iPoint++) {
+   if (waParsedOptions.version == WA_OPTIONS::CATRIS) {
+      const su2double sqrt_rho = sqrt(flowNodes->GetDensity(iPoint));
+      const su2double R = nodes->GetSolution(iPoint,0);
+      const su2double diffused_quantity = sqrt_rho * R;
+      nodes->SetAuxVar(iPoint, 1, diffused_quantity);
+    }
+  }
+  END_SU2_OMP_FOR
+  
+  /*--- calculate the gradient of the vorticity magnitude (AuxVarGradient) ---*/
+
+  if (config->GetKind_Gradient_Method() == GREEN_GAUSS) SetAuxVar_Gradient_GG(geometry, config);
+  if (config->GetKind_Gradient_Method() == WEIGHTED_LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
+
   /*--- Clear Residual and Jacobian. Upwind second order reconstruction and gradients ---*/
   CommonPreprocessing(geometry, config, Output);
 
@@ -211,11 +235,46 @@ void CTurbWASolver::Postprocessing(CGeometry *geometry, CSolver **solver_contain
   }
   END_SU2_OMP_FOR
 
-
-//  TODO: Implement transition model for WA (WA-AT)
+//TODO: Implement transition model for WA (WA-AT)
   /*--- Compute turbulence index ---*/
-  if (config->GetKind_Trans_Model() != TURB_TRANS_MODEL::NONE) {
-    SU2_MPI::Error("Transition model not implemented for WA model", CURRENT_FUNCTION);
+  if (config->GetKind_Trans_Model() != TURB_TRANS_MODEL::NONE || config->GetWAParsedOptions().at) {
+    for (auto iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++){
+      if (config->GetViscous_Wall(iMarker)) {
+        SU2_OMP_FOR_STAT(OMP_MIN_SIZE)
+        for (auto iVertex = 0u; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+          const auto iPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+
+          /*--- Check if the node belongs to the domain (i.e, not a halo node) ---*/
+
+          if (geometry->nodes->GetDomain(iPoint)) {
+            const auto jPoint = geometry->vertex[iMarker][iVertex]->GetNormal_Neighbor();
+
+            su2double FrictionVelocity = 0.0;
+            /*--- Formulation varies for 2D and 3D problems: in 3D the friction velocity is assumed to be sqrt(mu * |Omega|)
+            (provided by the reference paper https://doi.org/10.2514/6.1992-439), whereas in 2D we have to use the
+            standard definition sqrt(c_f / rho) since Omega = 0.  ---*/
+            if(nDim == 2){
+              su2double shearStress = 0.0;
+              for(auto iDim = 0u; iDim < nDim; iDim++) {
+                shearStress += pow(solver_container[FLOW_SOL]->GetCSkinFriction(iMarker, iVertex, iDim), 2.0);
+              }
+              shearStress = sqrt(shearStress);
+
+              FrictionVelocity = sqrt(shearStress/flowNodes->GetDensity(iPoint));
+            } else {
+              su2double VorticityMag = max(GeometryToolbox::Norm(3, flowNodes->GetVorticity(iPoint)), 1e-12);
+              FrictionVelocity = sqrt(flowNodes->GetLaminarViscosity(iPoint)*VorticityMag);
+            }
+            const su2double wall_dist = geometry->nodes->GetWall_Distance(jPoint);
+            const su2double Derivative = nodes->GetSolution(jPoint, 0) / wall_dist;
+            const su2double turbulence_index = Derivative / (FrictionVelocity * 0.41);
+
+            nodes->SetTurbIndex(iPoint, turbulence_index);
+          }
+        }
+        END_SU2_OMP_FOR
+      }
+    }
   }
 
   AD::EndNoSharedReading();
@@ -241,6 +300,7 @@ void CTurbWASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
                                     CNumerics **numerics_container, CConfig *config, unsigned short iMesh) {
 
   const bool implicit = (config->GetKind_TimeIntScheme() == EULER_IMPLICIT);
+  const bool transition_AT = config->GetWAParsedOptions().at;
 
   auto* flowNodes = su2staticcast_p<CFlowVariable*>(solver_container[FLOW_SOL]->GetNodes());
 
@@ -302,9 +362,22 @@ void CTurbWASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
     
     numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nullptr);
 
+    /*--- Effective Intermittency ---*/
+    //TODO: Include transition_AT as a check in the if?
+    if (config->GetKind_Trans_Model() != TURB_TRANS_MODEL::NONE) {
+      numerics->SetIntermittencyEff(solver_container[TRANS_SOL]->GetNodes()->GetIntermittencyEff(iPoint));
+      numerics->SetIntermittency(solver_container[TRANS_SOL]->GetNodes()->GetSolution(iPoint, 0));
+    }
+
     /*--- Compute the source term ---*/
 
     auto residual = numerics->ComputeResidual(config);
+
+    /*--- Store the intermittency ---*/
+
+    if (transition_AT || config->GetKind_Trans_Model() != TURB_TRANS_MODEL::NONE) {
+      nodes->SetIntermittency(iPoint,numerics->GetIntermittencyEff());
+    }
 
     /*--- Subtract residual and the Jacobian ---*/
 
@@ -517,6 +590,9 @@ void CTurbWASolver::BC_Inlet(CGeometry *geometry, CSolver **solver_container, CN
          const su2double* Turb_Properties = config->GetInlet_TurbVal(config->GetMarker_All_TagBound(val_marker));
          const su2double R_Factor = Turb_Properties[0];
          Inlet_Vars[0] = R_Factor * Laminar_Viscosity_Inlet / Density_Inlet;
+         if (config->GetWAParsedOptions().at) {
+          Inlet_Vars[0] = 0.002 * Laminar_Viscosity_Inlet / Density_Inlet;
+         }
       }
 
       /*--- Load the inlet turbulence variable (uniform by default). ---*/

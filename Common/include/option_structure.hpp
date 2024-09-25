@@ -1217,12 +1217,16 @@ enum class WA_OPTIONS {
   V2017m,    /*!< \brief 2017m WA model. */
   V2017,     /*!< \brief 2017 WA model. */
   V2018,     /*!< \brief 2018 Wall Distance Free (WDF) WA Model. */
+  AT,       /*!< \brief Algebraic Transition model. */
+  CATRIS,   /*!< \brief Catris-Aupoix compressibility corrections. */
 };
 static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
   MakePair("NONE", WA_OPTIONS::NONE)
   MakePair("V2017m", WA_OPTIONS::V2017m)
   MakePair("V2017", WA_OPTIONS::V2017)
   MakePair("V2018", WA_OPTIONS::V2018)
+  MakePair("AT", WA_OPTIONS::AT)
+  MakePair("CATRIS",WA_OPTIONS::CATRIS)
 };
 
 /*!
@@ -1230,6 +1234,7 @@ static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
  */
 struct WA_ParsedOptions {
   WA_OPTIONS version = WA_OPTIONS::V2017m;  /*!< \brief WA base model. */
+  bool at = false;                          /*!< \brief  AT transition. */
 };
 
 /*!
@@ -1247,26 +1252,30 @@ inline WA_ParsedOptions ParseWAOptions(const WA_OPTIONS *WA_Options, unsigned sh
     return std::find(WA_Options, wa_options_end, option) != wa_options_end;
   };
 
-  const bool found_2017m = IsPresent(WA_OPTIONS::V2017m);
-  const bool found_2017 = IsPresent(WA_OPTIONS::V2017);
-  const bool found_2018 = IsPresent(WA_OPTIONS::V2018);
+  const bool found_V2017m = IsPresent(WA_OPTIONS::V2017m);
+  const bool found_V2017 = IsPresent(WA_OPTIONS::V2017);
+  const bool found_V2018 = IsPresent(WA_OPTIONS::V2018);
+  const bool found_catris = IsPresent(WA_OPTIONS::CATRIS);
 
-  const bool wa_2017m = found_2017m;
-  const bool wa_2017 = found_2017;
-  const bool wa_2018 = found_2018;
-
-  if (wa_2017m && wa_2017 || wa_2017m && wa_2018 || wa_2017 && wa_2018) {
+  if (found_V2017m && found_V2017 || found_V2017m && found_V2018 || found_V2017 && found_V2018) {
     SU2_MPI::Error("Two versions selected for WA_OPTIONS. Please choose only one.", CURRENT_FUNCTION);
-  } else if (wa_2017m && wa_2017 && wa_2018) {
+  } else if (found_V2017m && found_V2017 && found_V2018) {
     SU2_MPI::Error("Three versions selected for WA_OPTIONS. Please choose only one.", CURRENT_FUNCTION);
-  } else if (wa_2018) {
+  } else if (found_V2018) {
     WAParsedOptions.version = WA_OPTIONS::V2018;
-  } else if (wa_2017) {
+  } else if (found_V2017) {
     WAParsedOptions.version = WA_OPTIONS::V2017;
-  } else {
+  } else if (found_catris) {
+    WAParsedOptions.version = WA_OPTIONS::CATRIS;
+  } else { 
     WAParsedOptions.version = WA_OPTIONS::V2017m;
   }
 
+  WAParsedOptions.at = IsPresent(WA_OPTIONS::AT);
+
+  if (WAParsedOptions.at && !found_V2018){
+    SU2_MPI::Error("WA-AT Transition model is based on WA-2018. Please choose WA-2018 to also use WA-AT.", CURRENT_FUNCTION);
+  }
   return WAParsedOptions;
 }
 

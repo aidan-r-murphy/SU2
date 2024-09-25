@@ -1276,7 +1276,11 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
       numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSST<Indices>(nDim, nVar_Turb, constants, true, config);
     }
     else if (wray_agarwal) {
-      numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbWA<Indices>(nDim, nVar_Turb, constants, true, config);
+      if (config->GetWAParsedOptions().version == WA_OPTIONS::CATRIS){
+        numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbWA_Catris<Indices>(nDim, nVar_Turb, constants, true, config);
+      } else {
+        numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbWA<Indices>(nDim, nVar_Turb, constants, true, config);
+      }
     }
   }
 
@@ -1320,7 +1324,11 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
     }
     else if (wray_agarwal) {
       numerics[iMGlevel][TURB_SOL][conv_bound_term] = new CUpwSca_TurbWA<Indices>(nDim, nVar_Turb, config);
-      numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbWA<Indices>(nDim, nVar_Turb, constants, false, config);
+      if (config->GetWAParsedOptions().version == WA_OPTIONS::CATRIS){
+        numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbWA_Catris<Indices>(nDim, nVar_Turb, constants, false, config);
+      } else {
+        numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbWA<Indices>(nDim, nVar_Turb, constants, false, config);
+      }
     }
   }
 }
