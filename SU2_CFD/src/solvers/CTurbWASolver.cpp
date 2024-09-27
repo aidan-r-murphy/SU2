@@ -294,16 +294,6 @@ void CTurbWASolver::Viscous_Residual(const unsigned long iEdge, const CGeometry*
     }
   };
 
-  if (waParsedOptions.version == WA_OPTIONS::CATRIS){
-      /*--- Loop over all points. ---*/
-    SU2_OMP_FOR_DYN(omp_chunk_size)
-    for (unsigned long iPoint = 0; iPoint < nPointDomain; iPoint++) {
-      /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
-      numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nullptr);
-    }
-    END_SU2_OMP_FOR
-  }
-
   /*--- Now instantiate the generic implementation with the functor above. ---*/
 
   Viscous_Residual_impl(SolverSpecificNumerics, iEdge, geometry, solver_container, numerics, config);
@@ -330,7 +320,7 @@ void CTurbWASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
   }
   END_SU2_OMP_FOR
   
-  /*--- calculate the gradient of the strain magnitude (AuxVarGradient) ---*/
+  /*--- calculate the gradient of the auxiliary variable (AuxVarGradient) ---*/
 
   if (config->GetKind_Gradient_Method() == GREEN_GAUSS) SetAuxVar_Gradient_GG(geometry, config);
   if (config->GetKind_Gradient_Method() == LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
@@ -372,7 +362,7 @@ void CTurbWASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
 
     numerics->Setf1Switching(nodes->Getf1Switching(iPoint), 0.0);
 
-    /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
+    /*--- Set the gradient of the auxiliary variables (AuxVarGradient) ---*/
     
     numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nullptr);
 
