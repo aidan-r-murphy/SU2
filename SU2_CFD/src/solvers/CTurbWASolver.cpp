@@ -174,26 +174,25 @@ void CTurbWASolver::Preprocessing(CGeometry *geometry, CSolver **solver_containe
         unsigned short iMesh, unsigned short iRKStep, unsigned short RunTime_EqSystem, bool Output) {
   SU2_OMP_SAFE_GLOBAL_ACCESS(config->SetGlobalParam(config->GetKind_Solver(), RunTime_EqSystem);)
 
-  auto* flowNodes = su2staticcast_p<CFlowVariable*>(solver_container[FLOW_SOL]->GetNodes());
-
   AD::StartNoSharedReading();
   
-  /* --- Set strain mag as auxiliary variable --- */
-  SU2_OMP_FOR_STAT(omp_chunk_size)
-  for (unsigned long iPoint = 0; iPoint < nPoint; iPoint++) {
-   if (waParsedOptions.version == WA_OPTIONS::CATRIS) {
+  /* --- Set WA-Catris auxiliary variable --- */
+  if (waParsedOptions.version == WA_OPTIONS::CATRIS) {
+    auto* flowNodes = su2staticcast_p<CFlowVariable*>(solver_container[FLOW_SOL]->GetNodes());
+    
+    SU2_OMP_FOR_STAT(omp_chunk_size)
+    for (unsigned long iPoint = 0; iPoint < nPoint; iPoint++) {
       const su2double sqrt_rho = sqrt(flowNodes->GetDensity(iPoint));
       const su2double R = nodes->GetSolution(iPoint,0);
       const su2double diffused_quantity = sqrt_rho * R;
       nodes->SetAuxVar(iPoint, 1, diffused_quantity);
     }
+    END_SU2_OMP_FOR
+    if (config->GetKind_Gradient_Method() == GREEN_GAUSS) SetAuxVar_Gradient_GG(geometry, config);
+    if (config->GetKind_Gradient_Method() == LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
+    if (config->GetKind_Gradient_Method() == WEIGHTED_LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
   }
-  END_SU2_OMP_FOR
-  
-  /*--- calculate the gradient of the vorticity magnitude (AuxVarGradient) ---*/
-
-  if (config->GetKind_Gradient_Method() == GREEN_GAUSS) SetAuxVar_Gradient_GG(geometry, config);
-  if (config->GetKind_Gradient_Method() == WEIGHTED_LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
+  AD::EndNoSharedReading();
 
   /*--- Clear Residual and Jacobian. Upwind second order reconstruction and gradients ---*/
   CommonPreprocessing(geometry, config, Output);
@@ -289,6 +288,10 @@ void CTurbWASolver::Viscous_Residual(const unsigned long iEdge, const CGeometry*
     numerics->Setf1Switching(nodes->Getf1Switching(iPoint), nodes->Getf1Switching(jPoint));
     /*--- Roughness heights. ---*/
     numerics->SetRoughness(geometry->nodes->GetRoughnessHeight(iPoint), geometry->nodes->GetRoughnessHeight(jPoint));
+    if (waParsedOptions.version == WA_OPTIONS::CATRIS){
+      /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
+      numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nodes->GetAuxVarGradient(jPoint));
+    }
   };
 
   /*--- Now instantiate the generic implementation with the functor above. ---*/
@@ -317,9 +320,10 @@ void CTurbWASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
   }
   END_SU2_OMP_FOR
   
-  /*--- calculate the gradient of the vorticity magnitude (AuxVarGradient) ---*/
+  /*--- calculate the gradient of the strain magnitude (AuxVarGradient) ---*/
 
   if (config->GetKind_Gradient_Method() == GREEN_GAUSS) SetAuxVar_Gradient_GG(geometry, config);
+  if (config->GetKind_Gradient_Method() == LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
   if (config->GetKind_Gradient_Method() == WEIGHTED_LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
 
   /*--- Loop over all points. ---*/
@@ -358,7 +362,7 @@ void CTurbWASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
 
     numerics->Setf1Switching(nodes->Getf1Switching(iPoint), 0.0);
 
-    /*--- calculate the gradient of the vorticity magnitude (AuxVarGradient) ---*/
+    /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
     
     numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nullptr);
 

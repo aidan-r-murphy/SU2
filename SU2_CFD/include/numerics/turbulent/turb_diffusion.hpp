@@ -507,7 +507,7 @@ private:
     const su2double diff_j_R = sigma_R_j*ScalarVar_j[0]/sqrt(Density_j);
     const su2double diff_R = 0.5*(diff_i_R + diff_j_R);
 
-    su2double edgeVec[3], dist_ij_2 = 0.0, proj_vector_ij = 0.0, projNormal[1], edgeProj = 0.0, projCorrected[1];
+    su2double edgeVec[3], dist_ij_2 = 0.0, proj_vector_ij = 0.0, projNormal[1], edgeProj = 0.0, projCorrected[1], meanGrad;
     
     assert(nDim == 2 || nDim == 3);
     nDim = (nDim > 2)? 3 : 2;
@@ -521,7 +521,7 @@ private:
 
     /*--- Mean gradient approximation. ---*/
     for (int iDim = 0; iDim < nDim; iDim++) {
-      su2double meanGrad = 0.5 * (AuxVar_Grad_i[1][iDim] + AuxVar_Grad_j[1][iDim]);
+      meanGrad = 0.5 * (AuxVar_Grad_i[1][iDim] + AuxVar_Grad_j[1][iDim]);
       projNormal[0] += meanGrad * Normal[iDim];
       if (correct_gradient) edgeProj += meanGrad * edgeVec[iDim];
     }
