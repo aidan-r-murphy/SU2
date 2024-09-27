@@ -294,6 +294,16 @@ void CTurbWASolver::Viscous_Residual(const unsigned long iEdge, const CGeometry*
     }
   };
 
+  if (waParsedOptions.version == WA_OPTIONS::CATRIS){
+      /*--- Loop over all points. ---*/
+    SU2_OMP_FOR_DYN(omp_chunk_size)
+    for (unsigned long iPoint = 0; iPoint < nPointDomain; iPoint++) {
+      /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
+      numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nullptr);
+    }
+    END_SU2_OMP_FOR
+  }
+
   /*--- Now instantiate the generic implementation with the functor above. ---*/
 
   Viscous_Residual_impl(SolverSpecificNumerics, iEdge, geometry, solver_container, numerics, config);
