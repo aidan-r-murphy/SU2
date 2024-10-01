@@ -1099,7 +1099,7 @@ class CSourcePieceWise_TurbWA : public CNumerics {
         const su2double Re_theta_c = 803.73 * pow(Tu_Inf + 0.6067, -1.027);
 
         const su2double Term1 = max(1.2*Re_theta - Re_theta_c, 0.0) / (chi_1 * Re_theta_c);
-        const su2double Term2 = max((nu_t / nu) / chi_2, 0.0);
+        const su2double Term2 = max((nu_t / nu) * chi_2, 0.0);
 
         intermittency_eff_i = 1.0 - exp(-sqrt(Term1)-sqrt(Term2));
         intermittency = intermittency_eff_i;
