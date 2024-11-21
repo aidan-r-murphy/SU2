@@ -1425,6 +1425,8 @@ void CConfig::SetConfig_Options() {
   /* DESCRIPTION:  */
   addDoubleOption("FREESTREAM_R_FACTOR", RFactor_FreeStream, 3.0);
   /* DESCRIPTION:  */
+  addDoubleOption("CROSSFLOW_CALIBRATION", C_cf, 1.0);
+  /* DESCRIPTION:  */
   addDoubleOption("LOWER_LIMIT_K_FACTOR", KFactor_LowerLimit, 1.0e-15);
   /* DESCRIPTION:  */
   addDoubleOption("LOWER_LIMIT_OMEGA_FACTOR", OmegaFactor_LowerLimit, 1e-05);
@@ -3488,6 +3490,10 @@ void CConfig::SetPostprocessing(SU2_COMPONENT val_software, unsigned short val_i
     saParsedOptions = ParseSAOptions(SA_Options, nSA_Options, rank);
   } else if (Kind_Turb_Model == TURB_MODEL::WA) {
     waParsedOptions = ParseWAOptions(WA_Options, nWA_Options, rank);
+    /*--- Check if problem is 2D and crossflow has been selected ---*/
+    if (waParsedOptions.cf && val_nDim == 2) {
+      SU2_MPI::Error("Crossflow corrections are available only for 3D problems", CURRENT_FUNCTION);
+    }
   }
 
   if (Kind_Solver == MAIN_SOLVER::INC_RANS && sstParsedOptions.compSarkar){
@@ -6300,6 +6306,7 @@ void CConfig::SetOutput(SU2_COMPONENT val_software, unsigned short val_izone) {
               cout << "-2017m";
             }
             if (waParsedOptions.at) cout << "-AT";
+            if (waParsedOptions.cf) cout << "-Crossflow";
             cout << "." << endl;
             break;
         }

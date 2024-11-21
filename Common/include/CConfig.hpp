@@ -889,6 +889,7 @@ private:
   ReThetaT_FreeStream,             /*!< \brief Freestream Transition Momentum Thickness Reynolds Number (for LM transition model) of the fluid.  */
   NuFactor_FreeStream,             /*!< \brief Ratio of turbulent to laminar viscosity. */
   RFactor_FreeStream,              /*!< \brief Ratio of turbulent to laminar viscosity (For WA Model). */
+  C_cf,                            /*!< \brief Crossflow calibration constant (For WA-AT-crossflow Model). */
   NuFactor_Engine,                 /*!< \brief Ratio of turbulent to laminar viscosity at the engine. */
   KFactor_LowerLimit,               /*!< \Non dimensional coefficient for lower limit of K in SST model. */
   OmegaFactor_LowerLimit,           /*!< \Non dimensional coefficient for lower limit of omega in SST model. */
@@ -2028,6 +2029,12 @@ public:
    * \return Non-dimensionalized freestream intensity (For WA Model).
    */
   su2double GetRFactor_FreeStream(void) const { return RFactor_FreeStream; }
+
+  /*!
+   * \brief Get the value of crossflow calibration constant (For WA-AT-crossflow Model).
+   * \return Crossflow calibration constant (For WA-AT-crossflow Model).
+   */
+  su2double Get_C_cf_Calibration(void) const { return C_cf; }
 
   /*!
    * \brief Get the k constant factor define a lower limit by multiplication with values in SST turbulence model.

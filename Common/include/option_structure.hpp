@@ -1213,12 +1213,14 @@ inline SA_ParsedOptions ParseSAOptions(const SA_OPTIONS *SA_Options, unsigned sh
  * \brief WA Options
  */
 enum class WA_OPTIONS {
-  NONE,     /*!< \brief No option / default. */
-  V2017m,    /*!< \brief 2017m WA model. */
-  V2017,     /*!< \brief 2017 WA model. */
-  V2018,     /*!< \brief 2018 Wall Distance Free (WDF) WA Model. */
-  AT,       /*!< \brief Algebraic Transition model. */
-  CATRIS,   /*!< \brief Catris-Aupoix compressibility corrections. */
+  NONE,       /*!< \brief No option / default. */
+  V2017m,     /*!< \brief 2017m WA model. */
+  V2017,      /*!< \brief 2017 WA model. */
+  V2018,      /*!< \brief 2018 Wall Distance Free (WDF) WA Model. */
+  AT,         /*!< \brief Algebraic Transition model. */
+  CROSSFLOW,  /*!< \brief Crossflow corrections. */
+  CC,         /*!< \brief Algebraic Transition model compressibility corrections. */
+  CATRIS,     /*!< \brief Catris-Aupoix compressibility corrections. */
 };
 static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
   MakePair("NONE", WA_OPTIONS::NONE)
@@ -1226,6 +1228,8 @@ static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
   MakePair("V2017", WA_OPTIONS::V2017)
   MakePair("V2018", WA_OPTIONS::V2018)
   MakePair("AT", WA_OPTIONS::AT)
+  MakePair("CROSSFLOW", WA_OPTIONS::CROSSFLOW)
+  MakePair("CC", WA_OPTIONS::CC)
   MakePair("CATRIS",WA_OPTIONS::CATRIS)
 };
 
@@ -1234,7 +1238,9 @@ static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
  */
 struct WA_ParsedOptions {
   WA_OPTIONS version = WA_OPTIONS::V2017m;  /*!< \brief WA base model. */
-  bool at = false;                          /*!< \brief  AT transition. */
+  bool at = false;                          /*!< \brief AT transition. */
+  bool cf = false;                          /*!< \brief Crossflow corrections. */
+  bool cc = false;                          /*!< \brief AT transition compressibility corrections. */
 };
 
 /*!
@@ -1272,9 +1278,14 @@ inline WA_ParsedOptions ParseWAOptions(const WA_OPTIONS *WA_Options, unsigned sh
   }
 
   WAParsedOptions.at = IsPresent(WA_OPTIONS::AT);
+  WAParsedOptions.cf = IsPresent(WA_OPTIONS::CROSSFLOW);
+  WAParsedOptions.cc = IsPresent(WA_OPTIONS::CC);
 
   if (WAParsedOptions.at && !found_V2018){
     SU2_MPI::Error("WA-AT Transition model is only applied to WA-2018 currently. Please enable WA-2018 to use WA-AT.", CURRENT_FUNCTION);
+  }
+  if (WAParsedOptions.cf || WAParsedOptions.cc && !WAParsedOptions.at){
+    SU2_MPI::Error("Crossflow and compressibility correction options are only available for the WA-AT Transition model. Please enable WA-AT.", CURRENT_FUNCTION);
   }
   return WAParsedOptions;
 }

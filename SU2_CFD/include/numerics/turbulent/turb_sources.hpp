@@ -1050,10 +1050,12 @@ class CSourcePieceWise_TurbWA : public CNumerics {
     AD::SetPreaccIn(Volume);
     AD::SetPreaccIn(dist_i);
     AD::SetPreaccIn(f1_i);
-    AD::SetPreaccIn(V_i[idx.Density()], V_i[idx.LaminarViscosity()]);
+    AD::SetPreaccIn(V_i[idx.Density()], V_i[idx.LaminarViscosity()], V_i[idx.EddyViscosity()]);
+    AD::SetPreaccIn(&V_i[idx.Velocity()], nDim);
 
     Density_i = V_i[idx.Density()];
     Laminar_Viscosity_i = V_i[idx.LaminarViscosity()];
+    Eddy_Viscosity_i = V_i[idx.EddyViscosity()];
 
     Residual = 0.0;
     Jacobian_i[0] = 0.0;
@@ -1066,6 +1068,18 @@ class CSourcePieceWise_TurbWA : public CNumerics {
     su2double ScalarVar_Grad2_i = GeometryToolbox::SquaredNorm(nDim, ScalarVar_Grad_i[0]);
     su2double S2 = pow(StrainMag_i, 2.0);
     su2double intermittency = 1.0;
+
+    /* --- Helper variables for crossflow and compressibility WAAT corrections --- */
+    su2double Velocity[3] = {V_i[idx.Velocity()], V_i[1 + idx.Velocity()], 0.0};
+    if (nDim == 3) Velocity[2] = V_i[2 + idx.Velocity()];
+    const su2double VelocityMag_i = max(GeometryToolbox::Norm(3, Velocity), 1e-12);
+    su2double DirectionalVelocity[3] = {Velocity[0]/VelocityMag_i, Velocity[1]/VelocityMag_i, Velocity[2]/VelocityMag_i};
+
+    const su2double C_cf = config->Get_C_cf_Calibration();
+    su2double Helicity_i = GeometryToolbox::DotProduct(3, DirectionalVelocity, Vorticity_i);
+    su2double H_crossflow = dist_i * Helicity_i / VelocityMag_i;
+    su2double Delta_H_crossflow = H_crossflow * (1.0 + min(Eddy_Viscosity_i/Laminar_Viscosity_i, 0.4));
+    su2double Re_delta2t, Term3, Term4;
 
     /* --- Computation of switching function constants for the source terms --- */
     su2double C1_switching = f1_i*(C_1_kom - C_1_keps) + C_1_keps;
@@ -1098,10 +1112,43 @@ class CSourcePieceWise_TurbWA : public CNumerics {
         /*--- Menter correlation. ---*/
         const su2double Re_theta_c = 803.73 * pow(Tu_Inf + 0.6067, -1.027);
 
-        const su2double Term1 = max(1.2*Re_theta - Re_theta_c, 0.0) / (chi_1 * Re_theta_c);
-        const su2double Term2 = max((nu_t / nu) * chi_2, 0.0);
+        su2double Term1 = max(1.2*Re_theta - Re_theta_c, 0.0) / (chi_1 * Re_theta_c);
+        su2double Term2 = max((nu_t / nu) * chi_2, 0.0);
 
         intermittency_eff_i = 1.0 - exp(-sqrt(Term1)-sqrt(Term2));
+
+        if (options.cf && options.cc) {
+          /*--- Crossflow and compressibility corrections for the AT transistion model. ---*/
+          Re_delta2t = C_cf * Delta_H_crossflow * Re_theta_c;
+          Term1 = max(1.2*Re_theta - Re_theta_c, 0.0) / (chi_1 * Re_theta_c);
+
+          Term3 = min(max(Re_delta2t / 150.0 - 1.0, 0.0), 1.0);
+          Term4 = max(Term2, Term3);
+
+          if (Density_i <= 1.05*config->GetDensity_FreeStream()) {
+            intermittency_eff_i = 1.0 - exp(-sqrt(Term1)-sqrt(Term4));
+          } else {
+            intermittency_eff_i = 0.0;
+          }
+        } else if (options.cf && !options.cc) {
+          /*--- Only crossflow corrections for the AT transistion model. ---*/
+          Re_delta2t = C_cf * Delta_H_crossflow * Re_theta_c;
+
+          Term1 = max(1.2*Re_theta - Re_theta_c, 0.0) / (chi_1 * Re_theta_c);
+
+          Term3 = min(max(Re_delta2t / 150.0 - 1.0, 0.0), 1.0);
+          Term4 = max(Term2, Term3);
+          
+          intermittency_eff_i = 1.0 - exp(-sqrt(Term1)-sqrt(Term4));
+        } else if (!options.cf && options.cc) {
+          /*--- Only compressibility corrections for the AT transistion model. ---*/
+          if (Density_i <= 1.05*config->GetDensity_FreeStream()) {
+            intermittency_eff_i = 1.0 - exp(-sqrt(Term1)-sqrt(Term2));
+          } else {
+            intermittency_eff_i = 0.0;
+          }
+        }
+
         intermittency = intermittency_eff_i;
       }
 
