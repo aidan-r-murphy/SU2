@@ -1284,7 +1284,7 @@ inline WA_ParsedOptions ParseWAOptions(const WA_OPTIONS *WA_Options, unsigned sh
   if (WAParsedOptions.at && !found_V2018){
     SU2_MPI::Error("WA-AT Transition model is only applied to WA-2018 currently. Please enable WA-2018 to use WA-AT.", CURRENT_FUNCTION);
   }
-  if (WAParsedOptions.cf || WAParsedOptions.cc && !WAParsedOptions.at){
+  if ((WAParsedOptions.cf || WAParsedOptions.cc) && !WAParsedOptions.at){
     SU2_MPI::Error("Crossflow and compressibility correction options are only available for the WA-AT Transition model. Please enable WA-AT.", CURRENT_FUNCTION);
   }
   return WAParsedOptions;
