@@ -1221,6 +1221,7 @@ enum class WA_OPTIONS {
   CROSSFLOW,  /*!< \brief Crossflow corrections. */
   CC,         /*!< \brief Algebraic Transition model compressibility corrections. */
   CATRIS,     /*!< \brief Catris-Aupoix compressibility corrections. */
+  VP,       /*!< \brief Compressible inner layer (variable-property) corections. */
 };
 static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
   MakePair("NONE", WA_OPTIONS::NONE)
@@ -1231,6 +1232,7 @@ static const MapType<std::string, WA_OPTIONS> WA_Options_Map = {
   MakePair("CROSSFLOW", WA_OPTIONS::CROSSFLOW)
   MakePair("CC", WA_OPTIONS::CC)
   MakePair("CATRIS",WA_OPTIONS::CATRIS)
+  MakePair("VP",WA_OPTIONS::VP)
 };
 
 /*!
@@ -1262,6 +1264,7 @@ inline WA_ParsedOptions ParseWAOptions(const WA_OPTIONS *WA_Options, unsigned sh
   const bool found_V2017 = IsPresent(WA_OPTIONS::V2017);
   const bool found_V2018 = IsPresent(WA_OPTIONS::V2018);
   const bool found_catris = IsPresent(WA_OPTIONS::CATRIS);
+  const bool found_vp = IsPresent(WA_OPTIONS::VP);
 
   if (found_V2017m && found_V2017 || found_V2017m && found_V2018 || found_V2017 && found_V2018) {
     SU2_MPI::Error("Two versions selected for WA_OPTIONS. Please choose only one.", CURRENT_FUNCTION);
@@ -1273,6 +1276,8 @@ inline WA_ParsedOptions ParseWAOptions(const WA_OPTIONS *WA_Options, unsigned sh
     WAParsedOptions.version = WA_OPTIONS::V2017;
   } else if (found_catris) {
     WAParsedOptions.version = WA_OPTIONS::CATRIS;
+  } else if (found_vp) {
+    WAParsedOptions.version = WA_OPTIONS::VP;
   } else { 
     WAParsedOptions.version = WA_OPTIONS::V2017m;
   }

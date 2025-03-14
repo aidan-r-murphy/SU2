@@ -192,6 +192,29 @@ void CTurbWASolver::Preprocessing(CGeometry *geometry, CSolver **solver_containe
     if (config->GetKind_Gradient_Method() == LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
     if (config->GetKind_Gradient_Method() == WEIGHTED_LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
   }
+
+  /* --- Set WA-VP auxiliary variable --- */
+  if (waParsedOptions.version == WA_OPTIONS::VP) {
+    auto* flowNodes = su2staticcast_p<CFlowVariable*>(solver_container[FLOW_SOL]->GetNodes());
+    
+    SU2_OMP_FOR_STAT(omp_chunk_size)
+    for (unsigned long iPoint = 0; iPoint < nPoint; iPoint++) {
+      const su2double rho = flowNodes->GetDensity(iPoint);
+      const su2double mu = flowNodes->GetLaminarViscosity(iPoint);
+      const su2double R = nodes->GetSolution(iPoint,0);
+      const su2double StrainMag = max(flowNodes->GetStrainMag(iPoint), 1e-16);
+      const su2double d = geometry->nodes->GetWall_Distance(iPoint);
+
+      nodes->SetAuxVar(iPoint, 1, mu*StrainMag);
+      nodes->SetAuxVar(iPoint, 2, rho/mu*R);
+      nodes->SetAuxVar(iPoint, 3, d*sqrt(rho)/mu);
+    }
+    END_SU2_OMP_FOR
+    if (config->GetKind_Gradient_Method() == GREEN_GAUSS) SetAuxVar_Gradient_GG(geometry, config);
+    if (config->GetKind_Gradient_Method() == LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
+    if (config->GetKind_Gradient_Method() == WEIGHTED_LEAST_SQUARES) SetAuxVar_Gradient_LS(geometry, config);
+  }
+
   AD::EndNoSharedReading();
 
   /*--- Clear Residual and Jacobian. Upwind second order reconstruction and gradients ---*/
@@ -234,7 +257,6 @@ void CTurbWASolver::Postprocessing(CGeometry *geometry, CSolver **solver_contain
   }
   END_SU2_OMP_FOR
 
-//TODO: Implement transition model for WA (WA-AT)
   /*--- Compute turbulence index ---*/
   if (config->GetKind_Trans_Model() != TURB_TRANS_MODEL::NONE || config->GetWAParsedOptions().at) {
     for (auto iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++){
@@ -289,6 +311,10 @@ void CTurbWASolver::Viscous_Residual(const unsigned long iEdge, const CGeometry*
     /*--- Roughness heights. ---*/
     numerics->SetRoughness(geometry->nodes->GetRoughnessHeight(iPoint), geometry->nodes->GetRoughnessHeight(jPoint));
     if (waParsedOptions.version == WA_OPTIONS::CATRIS){
+      /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
+      numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nodes->GetAuxVarGradient(jPoint));
+    }
+    if (waParsedOptions.version == WA_OPTIONS::VP){
       /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
       numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nodes->GetAuxVarGradient(jPoint));
     }
@@ -367,7 +393,6 @@ void CTurbWASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
     numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nullptr);
 
     /*--- Effective Intermittency ---*/
-    //TODO: Include transition_AT as a check in the if?
     if (config->GetKind_Trans_Model() != TURB_TRANS_MODEL::NONE) {
       numerics->SetIntermittencyEff(solver_container[TRANS_SOL]->GetNodes()->GetIntermittencyEff(iPoint));
       numerics->SetIntermittency(solver_container[TRANS_SOL]->GetNodes()->GetSolution(iPoint, 0));

@@ -1081,6 +1081,14 @@ class CSourcePieceWise_TurbWA : public CNumerics {
     su2double Delta_H_crossflow = H_crossflow * (1.0 + min(Eddy_Viscosity_i/Laminar_Viscosity_i, 0.4));
     su2double Re_delta2t, Term3, Term4;
 
+    /* --- Helper variables for variable-property compressible corrections (WA-VP) --- */
+    su2double S_y, VP_StrainMag_Grad2_i, VP_GradR_dot_GradS;
+    if (waParsedOptions.version == WA_OPTIONS::VP) {
+      S_y = pow(sqrt(Density_i)/Laminar_Viscosity_i + dist_i*AuxVar_Grad_i[3][1], -1.0);
+      VP_StrainMag_Grad2_i = GeometryToolbox::SquaredNorm(nDim, AuxVar_Grad_i[1]);
+      VP_GradR_dot_GradS = GeometryToolbox::DotProduct(nDim, AuxVar_Grad_i[2], AuxVar_Grad_i[1]);
+    }
+
     /* --- Computation of switching function constants for the source terms --- */
     su2double C1_switching = f1_i*(C_1_kom - C_1_keps) + C_1_keps;
     su2double sigmaR_switching = f1_i*(sigma_kom - sigma_keps) + sigma_keps;
@@ -1156,12 +1164,19 @@ class CSourcePieceWise_TurbWA : public CNumerics {
       su2double Prod = intermittency * C1_switching * ScalarVar_i[0] * StrainMag_i;
 
       /* --- First Destruction term --- */
-      su2double Dest1 = f1_i * C_2kom * ScalarVar_i[0] / StrainMag_i * GradR_dot_GradS;
+      su2double Dest1;
+      if(waParsedOptions.version == WA_OPTIONS::VP) {
+        Dest1 = f1_i * C_2kom * ScalarVar_i[0] / StrainMag_i * pow(S_y, 2.0) / pow(Laminar_Viscosity_i, 2.0) * VP_GradR_dot_GradS;
+      } else {
+        Dest1 = f1_i * C_2kom * ScalarVar_i[0] / StrainMag_i * GradR_dot_GradS;
+      }
 
       /* --- Second Destruction term --- */
       su2double Dest2;
       if (waParsedOptions.version == WA_OPTIONS::V2017) { // WA-2017
         Dest2 = (1.0 - f1_i) * C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2);
+      } else if (waParsedOptions.version == WA_OPTIONS::VP) { // WA-VP
+        Dest2 = (1.0 - f1_i) * C_2keps * pow(ScalarVar_i[0], 2.0) * Density_i * pow(S_y, 2.0) / pow(Laminar_Viscosity_i, 4.0) * (VP_StrainMag_Grad2_i / S2);
       } else { // WA-2018 and WA-2017m
         Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2), C_m*ScalarVar_Grad2_i);
       }
@@ -1172,7 +1187,11 @@ class CSourcePieceWise_TurbWA : public CNumerics {
 
       /* --- Add the first destruction term to the residual and Jacobian. --- */
       Residual += Dest1 * Volume;
-      Jacobian_i[0] += (f1_i * C_2kom / StrainMag_i * GradR_dot_GradS)*Volume;
+      if (waParsedOptions.version == WA_OPTIONS::VP) {
+        Jacobian_i[0] += (f1_i * C_2kom * pow(S_y, 2.0) / pow(Laminar_Viscosity_i, 2.0) / StrainMag_i * VP_GradR_dot_GradS)*Volume;
+      } else {
+        Jacobian_i[0] += (f1_i * C_2kom / StrainMag_i * GradR_dot_GradS)*Volume;
+      }
 
       /* --- Add the second destruction term to the residual (treat this term as explicit). --- */
       Residual -= Dest2 * Volume;

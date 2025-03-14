@@ -6323,6 +6323,8 @@ void CConfig::SetOutput(SU2_COMPONENT val_software, unsigned short val_izone) {
               cout << "-2017";
             } else if (waParsedOptions.version == WA_OPTIONS::CATRIS) {
               cout << "-Catris";
+            } else if (waParsedOptions.version == WA_OPTIONS::VP) {
+              cout << "-Variable-Property";
             } else {
               cout << "-2017m";
             }
