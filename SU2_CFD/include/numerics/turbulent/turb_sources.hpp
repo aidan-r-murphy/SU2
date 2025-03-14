@@ -1082,11 +1082,12 @@ class CSourcePieceWise_TurbWA : public CNumerics {
     su2double Re_delta2t, Term3, Term4;
 
     /* --- Helper variables for variable-property compressible corrections (WA-VP) --- */
-    su2double S_y, VP_StrainMag_Grad2_i, VP_GradR_dot_GradS;
+    su2double S_y, VP_StrainMag_Grad2_i, VP_GradR_dot_GradS, VP_ScalarVar_Grad2_i;
     if (waParsedOptions.version == WA_OPTIONS::VP) {
       S_y = pow(sqrt(Density_i)/Laminar_Viscosity_i + dist_i*AuxVar_Grad_i[3][1], -1.0);
       VP_StrainMag_Grad2_i = GeometryToolbox::SquaredNorm(nDim, AuxVar_Grad_i[1]);
       VP_GradR_dot_GradS = GeometryToolbox::DotProduct(nDim, AuxVar_Grad_i[2], AuxVar_Grad_i[1]);
+      VP_ScalarVar_Grad2_i = GeometryToolbox::SquaredNorm(nDim, AuxVar_Grad_i[2]);
     }
 
     /* --- Computation of switching function constants for the source terms --- */
@@ -1175,8 +1176,8 @@ class CSourcePieceWise_TurbWA : public CNumerics {
       su2double Dest2;
       if (waParsedOptions.version == WA_OPTIONS::V2017) { // WA-2017
         Dest2 = (1.0 - f1_i) * C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2);
-      } else if (waParsedOptions.version == WA_OPTIONS::VP) { // WA-VP
-        Dest2 = (1.0 - f1_i) * C_2keps * pow(ScalarVar_i[0], 2.0) * Density_i * pow(S_y, 2.0) / pow(Laminar_Viscosity_i, 4.0) * (VP_StrainMag_Grad2_i / S2);
+      } else if (waParsedOptions.version == WA_OPTIONS::VP) { // WA-VP (based on WA-2017m)
+        Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*Density_i*pow(S_y, 2.0)/pow(Laminar_Viscosity_i, 4.0)*(VP_StrainMag_Grad2_i / S2), C_m*pow(S_y, 2.0)*VP_ScalarVar_Grad2_i);
       } else { // WA-2018 and WA-2017m
         Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2), C_m*ScalarVar_Grad2_i);
       }

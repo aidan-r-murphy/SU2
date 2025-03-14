@@ -203,11 +203,10 @@ void CTurbWASolver::Preprocessing(CGeometry *geometry, CSolver **solver_containe
       const su2double mu = flowNodes->GetLaminarViscosity(iPoint);
       const su2double R = nodes->GetSolution(iPoint,0);
       const su2double StrainMag = max(flowNodes->GetStrainMag(iPoint), 1e-16);
-      const su2double d = geometry->nodes->GetWall_Distance(iPoint);
 
       nodes->SetAuxVar(iPoint, 1, mu*StrainMag);
       nodes->SetAuxVar(iPoint, 2, rho/mu*R);
-      nodes->SetAuxVar(iPoint, 3, d*sqrt(rho)/mu);
+      nodes->SetAuxVar(iPoint, 3, sqrt(rho)/mu);
     }
     END_SU2_OMP_FOR
     if (config->GetKind_Gradient_Method() == GREEN_GAUSS) SetAuxVar_Gradient_GG(geometry, config);
