@@ -613,16 +613,9 @@ private:
 
     /* --- Helper variables for variable-property compressible corrections (WA-VP) --- */
     const su2double S_y_i = pow(sqrt(Density_i)/Laminar_Viscosity_i + dist_i*AuxVar_Grad_i[3][1],-1.0);
-    const su2double S_y_j = pow(sqrt(Density_j)/Laminar_Viscosity_j + dist_j*AuxVar_Grad_i[3][1],-1.0);
+    const su2double S_y_j = pow(sqrt(Density_j)/Laminar_Viscosity_j + dist_j*AuxVar_Grad_j[3][1],-1.0);
     const su2double S_y_ij = 0.5*(S_y_i+S_y_j);
     const su2double mu_ij = 0.5*(Laminar_Viscosity_i+Laminar_Viscosity_j);
-
-    su2double VP_StrainMag_Grad2_i = GeometryToolbox::SquaredNorm(nDim, AuxVar_Grad_i[1]);
-
-    /*--- Compute mean effective viscosity ---*/
-    const su2double nu_i = Laminar_Viscosity_i/Density_i;
-    const su2double nu_j = Laminar_Viscosity_j/Density_j;
-    const su2double nu_ij = 0.5*(nu_i+nu_j);
 
     /* --- Compute constants from switching function --- */
     const su2double sigma_R_i = f1_i*(sigma_kom - sigma_keps) + sigma_keps;
