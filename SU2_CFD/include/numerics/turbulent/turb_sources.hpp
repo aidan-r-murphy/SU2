@@ -1177,7 +1177,7 @@ class CSourcePieceWise_TurbWA : public CNumerics {
       if (waParsedOptions.version == WA_OPTIONS::V2017) { // WA-2017
         Dest2 = (1.0 - f1_i) * C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2);
       } else if (waParsedOptions.version == WA_OPTIONS::VP) { // WA-VP (based on WA-2017m)
-        Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*Density_i*pow(S_y, 2.0)/pow(Laminar_Viscosity_i, 4.0)*(VP_StrainMag_Grad2_i / S2), C_m*pow(S_y, 2.0)/Density_i*VP_ScalarVar_Grad2_i);
+        Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*Density_i*pow(S_y, 2.0)/pow(Laminar_Viscosity_i, 4.0)*(VP_StrainMag_Grad2_i / S2), C_m*pow(S_y, 2.0)*VP_ScalarVar_Grad2_i);
       } else { // WA-2018 and WA-2017m
         Dest2 = (1.0 - f1_i) * min(C_2keps*pow(ScalarVar_i[0],2.0)*(StrainMag_Grad2_i / S2), C_m*ScalarVar_Grad2_i);
       }
