@@ -316,6 +316,7 @@ void CTurbWASolver::Viscous_Residual(const unsigned long iEdge, const CGeometry*
     if (waParsedOptions.version == WA_OPTIONS::VP){
       /*--- calculate the gradient of the auxiliary variables (AuxVarGradient) ---*/
       numerics->SetAuxVarGrad(nodes->GetAuxVarGradient(iPoint), nodes->GetAuxVarGradient(jPoint));
+      numerics->SetDistance(geometry->nodes->GetWall_Distance(iPoint), geometry->nodes->GetWall_Distance(jPoint));
     }
   };
 

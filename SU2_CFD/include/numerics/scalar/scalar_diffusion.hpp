@@ -127,6 +127,8 @@ class CAvgGrad_Scalar : public CNumerics {
     AD::SetPreaccIn(PrimVar_Grad_j, nDim, nDim);
     AD::SetPreaccIn(AuxVar_Grad_i, nDim, nDim);
     AD::SetPreaccIn(AuxVar_Grad_j, nDim, nDim);
+    AD::SetPreaccIn(dist_i);
+    AD::SetPreaccIn(dist_j);
     if (correct_gradient) {
       AD::SetPreaccIn(ScalarVar_i, nVar);
       AD::SetPreaccIn(ScalarVar_j, nVar);
