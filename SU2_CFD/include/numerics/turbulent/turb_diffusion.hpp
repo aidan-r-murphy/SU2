@@ -645,7 +645,7 @@ private:
     }
 
     projCorrected[0] = projNormal[0];
-    if (correct_gradient) projCorrected[0] -= (edgeProj - ((Density_j/Laminar_Viscosity_j)*ScalarVar_j[0]-(Density_j/Laminar_Viscosity_j)*ScalarVar_i[0])) * proj_vector_ij;
+    if (correct_gradient) projCorrected[0] -= (edgeProj - ((Density_j/Laminar_Viscosity_j)*ScalarVar_j[0]-(Density_i/Laminar_Viscosity_i)*ScalarVar_i[0])) * proj_vector_ij;
 
     Flux[0] = (diff_R*S_y_ij/mu_ij*projCorrected[0])*S_y_ij;
 
