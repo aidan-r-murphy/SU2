@@ -652,8 +652,8 @@ private:
     /*--- For Jacobians -> Use of TSL (Thin Shear Layer) approx. to compute derivatives of the gradients ---*/
     // TODO: Ensure Jacobian was computed correctly from the Flux
     if (implicit) {
-      Jacobian_i[0][0] = (0.5*projCorrected[0] - diff_R*S_y_ij/mu_ij*proj_vector_ij)*S_y_ij;
-      Jacobian_j[0][0] = (0.5*projCorrected[0] + diff_R*S_y_ij/mu_ij*proj_vector_ij)*S_y_ij;
+      Jacobian_i[0][0] = 0.5*Proj_Mean_GradScalarVar[0] - diff_R*proj_vector_ij;
+      Jacobian_j[0][0] = 0.5*Proj_Mean_GradScalarVar[0] + diff_R*proj_vector_ij;
     }
   }
 
