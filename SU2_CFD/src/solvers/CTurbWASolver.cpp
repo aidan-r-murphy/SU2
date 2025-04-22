@@ -87,17 +87,17 @@ CTurbWASolver::CTurbWASolver(CGeometry *geometry, CConfig *config, unsigned shor
   }
 
   /* --- Initialize value for WA model constants --- */
-  constants[0] = 0.0829;    // C_1komega
-  constants[1] = 0.1127;    // C_1kepsilon
-  constants[2] = 0.72;      // sigma_komega
-  constants[3] = 1.0;       // sigma_kepsilon
-  constants[4] = 0.41;      // kappa
-  constants[5] = 8.54;      // C_omega
+  constants[0] = config->GetC_1komega_coef();    // C_1komega
+  constants[1] = config->GetC_1kepsilon_coef();    // C_1kepsilon
+  constants[2] = config->Getsigma_komega_coef();      // sigma_komega
+  constants[3] = config->Getsigma_kepsilon_coef();       // sigma_kepsilon
+  constants[4] = config->Getkappa_coef();      // kappa
+  constants[5] = config->GetC_omega_coef();      // C_omega
 
   constants[6] = constants[0]/(pow(constants[4],2.0)) + constants[2];   // C_2komega
   constants[7] = constants[1]/(pow(constants[4],2.0)) + constants[3];   // C_2kepsilon
 
-  constants[8] = 8.0;       // C_m
+  constants[8] = config->GetC_m_coef();       // C_m
 
   if (waParsedOptions.version == WA_OPTIONS::V2018) {
     constants[1] = 0.1284;  // C_1kepsilon

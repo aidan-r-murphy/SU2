@@ -951,6 +951,14 @@ private:
   su2double Thermal_Diffusivity;  /*!< \brief Thermal diffusivity used in the heat solver. */
   su2double Mach_Motion;          /*!< \brief Mach number based on mesh velocity and freestream quantities. */
 
+  su2double C_1komega_coef,       /*!< \brief C_1komega coefficient for WA model tuning. */
+  C_1kepsilon_coef,               /*!< \brief C_1kepsilon coefficient for WA model tuning. */
+  sigma_komega_coef,              /*!< \brief sigma_komega coefficient for WA model tuning. */
+  sigma_kepsilon_coef,            /*!< \brief sigma_kepsilon coefficient for WA model tuning. */
+  kappa_coef,                     /*!< \brief kappa coefficient for WA model tuning. */
+  C_omega_coef,                   /*!< \brief C_omega coefficient for WA model tuning. */
+  C_m_coef;                       /*!< \brief C_m coefficient for WA model tuning. */
+
   su2double Motion_Origin[3] = {0.0}, /*!< \brief Mesh motion origin. */
   Translation_Rate[3] = {0.0},        /*!< \brief Translational velocity of the mesh. */
   Rotation_Rate[3] = {0.0},           /*!< \brief Angular velocity of the mesh . */
@@ -5974,6 +5982,48 @@ public:
    * \return Mach number based on the mesh velocity and freestream quantities.
    */
   su2double GetMach_Motion(void) const { return Mach_Motion; }
+
+  /*!
+   * \brief Get the value of the C_1komega coefficient for WA model tuning.
+   * \return C_1komega coefficient for WA model tuning.
+   */
+  su2double GetC_1komega_coef(void) const { return C_1komega_coef; }
+
+  /*!
+   * \brief Get the value of the C_1kepsilon coefficient for WA model tuning.
+   * \return C_1kepsilon coefficient for WA model tuning.
+   */
+  su2double GetC_1kepsilon_coef(void) const { return C_1kepsilon_coef; }
+
+  /*!
+   * \brief Get the value of the sigma_komega coefficient for WA model tuning.
+   * \return sigma_komega coefficient for WA model tuning.
+   */
+  su2double Getsigma_komega_coef(void) const { return sigma_komega_coef; }
+
+  /*!
+   * \brief Get the value of the sigma_kepsilon coefficient for WA model tuning.
+   * \return sigma_kepsilon coefficient for WA model tuning.
+   */
+  su2double Getsigma_kepsilon_coef(void) const { return sigma_kepsilon_coef; }
+
+  /*!
+   * \brief Get the value of the kappa coefficient for WA model tuning.
+   * \return kappa coefficient for WA model tuning.
+   */
+  su2double Getkappa_coef(void) const { return kappa_coef; }
+
+  /*!
+   * \brief Get the value of the C_omega coefficient for WA model tuning.
+   * \return C_omega coefficient for WA model tuning.
+   */
+  su2double GetC_omega_coef(void) const { return C_omega_coef; }
+
+  /*!
+   * \brief Get the value of the C_m coefficient for WA model tuning.
+   * \return C_m coefficient for WA model tuning.
+   */
+  su2double GetC_m_coef(void) const { return C_m_coef; }
 
   /*!
    * \brief Get the mesh motion origin.

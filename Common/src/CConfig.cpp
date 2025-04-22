@@ -1463,6 +1463,21 @@ void CConfig::SetConfig_Options() {
   /* DESCRIPTION: Number of times Alpha is updated in a fix CL problem. */
   addUnsignedLongOption("UPDATE_BCTHRUST", Update_BCThrust, 5);
 
+  /*--- Options related WA model coefficient tuning. ---*/
+  /* DESCRIPTION:  C_1komega */
+  addDoubleOption("COEFFICIENT_C_1KOMEGA", C_1komega_coef, 0.0829);
+  /* DESCRIPTION:  C_1kepsilon */
+  addDoubleOption("COEFFICIENT_C_1KEPSILON", C_1kepsilon_coef, 0.1127);
+  /* DESCRIPTION:  sigma_komega */
+  addDoubleOption("COEFFICIENT_SIGMA_KOMEGA", sigma_komega_coef, 0.72);
+  /* DESCRIPTION:  sigma_kepsilon */
+  addDoubleOption("COEFFICIENT_SIGMA_KEPSILON", sigma_kepsilon_coef, 1.0);
+  /* DESCRIPTION:  kappa */
+  addDoubleOption("COEFFICIENT_KAPPA", kappa_coef, 0.41);
+  /* DESCRIPTION:  C_omega */
+  addDoubleOption("COEFFICIENT_C_OMEGA", C_omega_coef, 8.54);
+  /* DESCRIPTION:  C_m */
+  addDoubleOption("COEFFICIENT_C_M", C_m_coef, 8.0);
 
   /*!\par CONFIG_CATEGORY: Reference Conditions \ingroup Config*/
   /*--- Options related to reference values for nondimensionalization ---*/
